@@ -1,0 +1,28 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: bossdd-monitor
+  profiles:
+    active: dev
+  config:
+    import: config/part/app.yml
+  flyway:
+    enabled: false
+    locations: classpath:flyway/sql
+    baseline-on-migrate: true
+    baseline-version: 1
+    validate-on-migrate: false
+    clean-disabled: true
+    clean-on-validation-error: false
+  jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
+
+mybatis-plus:
+  # classpath*:mapper/**/*.xml为默认值，默认扫描resources/mapper目录及其子目录下所有xml文件
+  mapper-locations: classpath*:mapper/**/*.xml
+  configuration:
+    map-underscore-to-camel-case: true
+

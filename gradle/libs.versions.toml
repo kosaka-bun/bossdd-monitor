@@ -1,0 +1,22 @@
+[versions]
+# project modules version
+root = "1.0.0-dev"
+
+# dependencies version
+kotlin = "1.8.10"
+kotlin-coroutines = "1.6.4"
+spring-boot = "3.2.5"
+honoka-framework-utils = "1.0.5-dev"
+lombok = "1.18.26"
+
+[plugins]
+kotlin = { id = "org.jetbrains.kotlin.jvm", version.ref = "kotlin" }
+kotlin-lombok = { id = "org.jetbrains.kotlin.plugin.lombok", version.ref = "kotlin" }
+kotlin-spring = { id = "org.jetbrains.kotlin.plugin.spring", version.ref = "kotlin" }
+dependency-management = "io.spring.dependency-management:1.1.4"
+spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
+
+[libraries]
+honoka-framework-utils = { module = "de.honoka.sdk:honoka-framework-utils", version.ref = "honoka-framework-utils" }
+kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
+lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
