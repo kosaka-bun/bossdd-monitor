@@ -35,13 +35,12 @@ dependencies {
     libs.versions.kotlin.coroutines
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
-    implementation(libs.honoka.framework.utils)
-    implementation("cn.hutool:hutool-all:5.8.18")
+    implementation(libs.qqrobot.spring.boot.starter)
     implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.5")
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.flywaydb:flyway-core")
     implementation("org.hibernate.validator:hibernate-validator")
-    implementation("org.springframework.boot:spring-boot-configuration-processor".also {
+    compileOnly("org.springframework.boot:spring-boot-configuration-processor".also {
         annotationProcessor(it)
     })
     compileOnly(libs.lombok.also {
