@@ -40,21 +40,30 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.flywaydb:flyway-core")
     implementation("org.hibernate.validator:hibernate-validator")
-    compileOnly("org.springframework.boot:spring-boot-configuration-processor".also {
+    implementation(libs.selenium)
+    implementation(libs.selenium.chrome.driver)
+    "org.springframework.boot:spring-boot-configuration-processor".let {
+        compileOnly(it)
         annotationProcessor(it)
-    })
-    compileOnly(libs.lombok.also {
+    }
+    libs.lombok.let {
+        compileOnly(it)
         annotationProcessor(it)
         testCompileOnly(it)
         testAnnotationProcessor(it)
-    })
+    }
     //Test
     testImplementation("org.springframework.boot:spring-boot-starter-test")
 }
 
 tasks {
     compileJava {
-        options.encoding = StandardCharsets.UTF_8.name()
+        options.run {
+            encoding = StandardCharsets.UTF_8.name()
+            compilerArgs.run {
+                add("-parameters")
+            }
+        }
     }
 
     withType<KotlinCompile> {

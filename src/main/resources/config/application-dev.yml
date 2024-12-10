@@ -7,14 +7,15 @@ spring:
 
 honoka:
   qqrobot:
-    # 指定一个机器人框架的实现
-    framework: onebot
     admin-qq: 123456
     developing-group: 123456
-    onebot:
-      host: localhost
-      websocket-port: 3001
-      http-port: 3101
+    framework:
+      # 指定一个机器人框架的实现
+      impl: onebot
+      onebot:
+        host: localhost
+        websocket-port: 3001
+        http-port: 3101
 
 logging:
   level:

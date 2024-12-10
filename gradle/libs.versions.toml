@@ -7,6 +7,7 @@ kotlin = "1.8.10"
 kotlin-coroutines = "1.6.4"
 spring-boot = "3.2.5"
 qqrobot-spring-boot-starter = "2.0.1-dev"
+selenium = "4.27.0"
 lombok = "1.18.26"
 
 [plugins]
@@ -19,4 +20,6 @@ spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
 qqrobot-spring-boot-starter = { module = "de.honoka.qqrobot:qqrobot-spring-boot-starter", version.ref = "qqrobot-spring-boot-starter" }
+selenium = { module = "org.seleniumhq.selenium:selenium-java", version.ref = "selenium" }
+selenium-chrome-driver = { module = "org.seleniumhq.selenium:selenium-chrome-driver", version.ref = "selenium" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }
