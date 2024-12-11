@@ -27,6 +27,7 @@ java {
 dependencyManagement {
     imports {
         mavenBom(libs.kotlin.bom.get().toString())
+        mavenBom(libs.selenium.bom.get().toString())
     }
 }
 
@@ -35,13 +36,12 @@ dependencies {
     libs.versions.kotlin.coroutines
     implementation("org.springframework.boot:spring-boot-starter")
     implementation("org.springframework.boot:spring-boot-starter-web")
+    implementation("org.springframework.boot:spring-boot-starter-validation")
     implementation(libs.qqrobot.spring.boot.starter)
     implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.5")
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.flywaydb:flyway-core")
-    implementation("org.hibernate.validator:hibernate-validator")
-    implementation(libs.selenium)
-    implementation(libs.selenium.chrome.driver)
+    implementation("org.seleniumhq.selenium:selenium-java")
     "org.springframework.boot:spring-boot-configuration-processor".let {
         compileOnly(it)
         annotationProcessor(it)

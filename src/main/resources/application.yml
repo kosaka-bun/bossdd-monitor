@@ -6,8 +6,6 @@ spring:
     name: bossdd-monitor
   profiles:
     active: dev
-  config:
-    import: config/part/app.yml
   flyway:
     enabled: false
     locations: classpath:flyway/sql

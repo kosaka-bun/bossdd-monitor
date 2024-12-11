@@ -2,8 +2,11 @@ package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.config.property.BrowserProperties
 import de.honoka.sdk.util.kotlin.code.exception
+import de.honoka.sdk.util.kotlin.code.log
 import de.honoka.sdk.util.kotlin.code.tryBlock
 import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
+import org.intellij.lang.annotations.Language
 import org.openqa.selenium.Dimension
 import org.openqa.selenium.Point
 import org.openqa.selenium.chrome.ChromeDriver
@@ -44,6 +47,9 @@ class BrowserService(private val browserProperties: BrowserProperties) {
         }
     }
     
+    @PreDestroy
+    private fun stop() = closeBrowser()
+    
     private fun disableSeleniumLog() {
         val classes = listOf(
             DevTools::class,
@@ -63,10 +69,13 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     fun initBrowser(headless: Boolean = true) {
         closeBrowser()
         val options = ChromeOptions().apply {
-            addArguments("--user-data-dir=${browserProperties.userDataDir.absolutePath}")
+            val userDataDir = browserProperties.userDataDir.absolutePath
+            log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
+            addArguments("--user-data-dir=$userDataDir")
             if(headless) addArguments("--headless")
         }
         browserOrNull = ChromeDriver(options)
+        browser.setLogLevel(Level.OFF)
         if(!headless) moveBrowserToCenter()
         browser.devTools.run {
             createSession()
@@ -87,6 +96,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             quit()
         }
         browserOrNull = null
+        log.info("Selenium Chrome driver has been closed.")
     }
     
     @Synchronized
@@ -96,40 +106,110 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     }
     
     @Synchronized
+    fun loadBlankPage(waitMillisAfterLoad: Long = 0) {
+        browserOrNull ?: initBrowser()
+        browser.get("about:blank")
+        TimeUnit.MILLISECONDS.sleep(waitMillisAfterLoad)
+    }
+    
+    @Synchronized
+    fun loadPage(url: String) {
+        loadBlankPage(500)
+        browser.get(url)
+    }
+    
+    @Synchronized
     fun waitForResponse(
         urlToLoad: String, urlPrefixToWait: String, resultPredicate: ((String) -> Boolean)? = null
     ): String {
-        browserOrNull ?: initBrowser()
-        browser.get("about:blank")
-        TimeUnit.MILLISECONDS.sleep(500)
+        loadBlankPage(500)
         tryBlock(3) {
-            val future = executor.submit(Callable {
+            val resultList = Collections.synchronizedList(LinkedList<String>())
+            val action = Callable {
                 var result: String? = null
-                val resultList = Collections.synchronizedList(LinkedList<String>())
-                urlPrefixToResponseMap[urlPrefixToWait] = resultList
-                try {
-                    browser.get(urlToLoad)
-                    outer@
-                    for(i in 1..20) {
-                        TimeUnit.MILLISECONDS.sleep(500)
-                        if(resultList.isEmpty()) continue
-                        for(r in resultList) {
-                            if(resultPredicate == null || resultPredicate(r)) {
-                                result = r
-                                break@outer
-                            }
+                browser.get(urlToLoad)
+                outer@
+                for(i in 1..20) {
+                    TimeUnit.MILLISECONDS.sleep(500)
+                    if(resultList.isEmpty()) continue
+                    for(r in resultList) {
+                        val shouldTake = resultPredicate == null || runCatching {
+                            resultPredicate(r)
+                        }.getOrDefault(false)
+                        if(shouldTake) {
+                            result = r
+                            break@outer
                         }
                     }
-                } finally {
-                    urlPrefixToResponseMap.remove(urlPrefixToWait)
                 }
                 result ?: exception("Cannot get the response of $urlPrefixToWait")
-            })
-            return future.get()
+            }
+            try {
+                urlPrefixToResponseMap[urlPrefixToWait] = resultList
+                return executor.submit(action).get(10, TimeUnit.SECONDS)
+            } finally {
+                urlPrefixToResponseMap.remove(urlPrefixToWait)
+            }
         }
     }
     
-    fun handleResponse(devTools: DevTools, event: ResponseReceived) {
+    @Suppress("UNCHECKED_CAST")
+    fun <T> executeJsExpression(@Language("JavaScript") jsExpression: String): T? = run {
+        browser.executeScript("return $jsExpression") as T?
+    }
+    
+    @Synchronized
+    fun <T> waitForJsResultOrNull(
+        urlToLoad: String,
+        @Language("JavaScript") jsExpression: String,
+        resultPredicate: ((T?) -> Boolean)? = null,
+        continueWaitOnResultIsNull: Boolean = false
+    ): T? {
+        loadBlankPage(500)
+        tryBlock(3) {
+            val future = executor.submit(Callable {
+                var result: T? = null
+                var hasResult = false
+                browser.get(urlToLoad)
+                for(i in 1..20) {
+                    TimeUnit.MILLISECONDS.sleep(500)
+                    try {
+                        val r = executeJsExpression<T>(jsExpression)
+                        if(r == null && continueWaitOnResultIsNull) continue
+                        val shouldTake = resultPredicate == null || runCatching {
+                            resultPredicate(r)
+                        }.getOrDefault(false)
+                        if(shouldTake) {
+                            result = r
+                            hasResult = true
+                            break
+                        }
+                    } catch(t: Throwable) {
+                        //ignore
+                    }
+                }
+                if(!hasResult) error("Cannot get the result of JavaScript expression: $jsExpression")
+                result
+            })
+            return future.get(10, TimeUnit.SECONDS)
+        }
+    }
+    
+    @Synchronized
+    fun <T> waitForJsResult(
+        urlToLoad: String,
+        @Language("JavaScript") jsExpression: String,
+        resultPredicate: ((T) -> Boolean)? = null,
+        continueWaitOnResultIsNull: Boolean = true
+    ): T = run {
+        var newResultPredicate: ((T?) -> Boolean)? = null
+        resultPredicate?.let { p ->
+            newResultPredicate = { p(it!!) }
+        }
+        waitForJsResultOrNull(urlToLoad, jsExpression, newResultPredicate, continueWaitOnResultIsNull)!!
+    }
+    
+    private fun handleResponse(devTools: DevTools, event: ResponseReceived) {
         val url = event.response.url
         val response = devTools.send(Network.getResponseBody(event.requestId)).body
         urlPrefixToResponseMap.forEach { (k, v) ->

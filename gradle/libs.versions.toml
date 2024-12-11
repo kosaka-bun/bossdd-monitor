@@ -19,7 +19,6 @@ spring-boot = { id = "org.springframework.boot", version.ref = "spring-boot" }
 
 [libraries]
 kotlin-bom = { module = "org.jetbrains.kotlin:kotlin-bom", version.ref = "kotlin" }
+selenium-bom = { module = "org.seleniumhq.selenium:selenium-dependencies-bom", version.ref = "selenium" }
 qqrobot-spring-boot-starter = { module = "de.honoka.qqrobot:qqrobot-spring-boot-starter", version.ref = "qqrobot-spring-boot-starter" }
-selenium = { module = "org.seleniumhq.selenium:selenium-java", version.ref = "selenium" }
-selenium-chrome-driver = { module = "org.seleniumhq.selenium:selenium-chrome-driver", version.ref = "selenium" }
 lombok = { module = "org.projectlombok:lombok", version.ref = "lombok" }

@@ -1,6 +1,5 @@
 package de.honoka.bossddmonitor.config.property;
 
-import de.honoka.sdk.util.file.FileUtils;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
@@ -20,7 +19,7 @@ public class BrowserProperties {
         private boolean clearOnStartup = false;
         
         public String getAbsolutePath() {
-            return Paths.get(FileUtils.getMainClasspath(), path).toAbsolutePath().normalize().toString();
+            return Paths.get(path).toAbsolutePath().normalize().toString();
         }
     }
 }
