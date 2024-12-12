@@ -65,6 +65,22 @@ class BrowserService(private val browserProperties: BrowserProperties) {
         Thread.setDefaultUncaughtExceptionHandler { _, _ -> }
     }
     
+    private fun moveBrowserToCenter() = browser.manage().window().run {
+        size = Dimension(1280, 850)
+        val screenSize = Toolkit.getDefaultToolkit().screenSize
+        val left = (screenSize.width - size.width) / 2
+        val top = (screenSize.height - size.height) / 2
+        position = Point(left, top)
+    }
+    
+    private fun handleResponse(devTools: DevTools, event: ResponseReceived) {
+        val url = event.response.url
+        val response = devTools.send(Network.getResponseBody(event.requestId)).body
+        urlPrefixToResponseMap.forEach { (k, v) ->
+            if(url.startsWith(k)) v.add(response)
+        }
+    }
+    
     @Synchronized
     fun initBrowser(headless: Boolean = true) {
         closeBrowser()
@@ -209,19 +225,12 @@ class BrowserService(private val browserProperties: BrowserProperties) {
         waitForJsResultOrNull(urlToLoad, jsExpression, newResultPredicate, continueWaitOnResultIsNull)!!
     }
     
-    private fun handleResponse(devTools: DevTools, event: ResponseReceived) {
-        val url = event.response.url
-        val response = devTools.send(Network.getResponseBody(event.requestId)).body
-        urlPrefixToResponseMap.forEach { (k, v) ->
-            if(url.startsWith(k)) v.add(response)
+    fun checkIsActive() {
+        browser.run {
+            //尝试获取以下属性的值，若无法获取将抛出异常，可视为浏览器已关闭
+            windowHandle
+            currentUrl
+            title
         }
-    }
-    
-    private fun moveBrowserToCenter() = browser.manage().window().run {
-        size = Dimension(1280, 850)
-        val screenSize = Toolkit.getDefaultToolkit().screenSize
-        val left = (screenSize.width - size.width) / 2
-        val top = (screenSize.height - size.height) / 2
-        position = Point(left, top)
     }
 }

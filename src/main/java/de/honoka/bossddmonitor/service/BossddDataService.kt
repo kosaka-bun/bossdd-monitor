@@ -39,9 +39,8 @@ class BossddDataService(
     
     @PreDestroy
     @Synchronized
-    fun stop() {
-        runningTask ?: return
-        runningTask?.cancel(true)
+    fun stop() = runningTask?.run {
+        cancel(true)
         runningTask = null
     }
     
@@ -72,6 +71,7 @@ class BossddDataService(
                     }
                     if(cookie?.containsKey("bst") != true) continue
                 } catch(t: Throwable) {
+                    browserService.checkIsActive()
                     continue
                 }
                 initBrowser()
