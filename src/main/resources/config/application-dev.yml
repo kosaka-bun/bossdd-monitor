@@ -18,12 +18,13 @@ honoka:
         http-port: 3101
 
 app:
-  bossdd:
-    city-code: 101010100
-    search-word: java
   browser:
     user-data-dir:
       path: ./build/selenium/user-data
+  data-service:
+    monitor-task:
+      initial-delay: 0s
+      delay: 1m
 
 logging:
   level:

@@ -1,21 +1,21 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.common.GlobalComponents
-import de.honoka.bossddmonitor.config.property.BossddProperties
+import de.honoka.bossddmonitor.config.property.DataServiceProperties
 import de.honoka.sdk.spring.starter.core.web.WebUtils
 import de.honoka.sdk.util.kotlin.code.log
-import de.honoka.sdk.util.kotlin.text.singleLine
 import jakarta.annotation.PreDestroy
 import org.springframework.boot.ApplicationArguments
 import org.springframework.boot.ApplicationRunner
 import org.springframework.stereotype.Service
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
+import kotlin.time.Duration
 
 @Service
 class BossddDataService(
     private val browserService: BrowserService,
-    private val bossddProperties: BossddProperties
+    private val dataServiceProperties: DataServiceProperties
 ) : ApplicationRunner {
     
     private var runningTask: ScheduledFuture<*>? = null
@@ -32,9 +32,12 @@ class BossddDataService(
                 log.error("", t)
             }
         }
-        runningTask = GlobalComponents.scheduledExecutor.run {
-            scheduleWithFixedDelay(action, 10, 60, TimeUnit.SECONDS)
-        }
+        runningTask = GlobalComponents.scheduledExecutor.scheduleWithFixedDelay(
+            action,
+            Duration.parse(dataServiceProperties.monitorTask.initialDelay).inWholeMilliseconds,
+            Duration.parse(dataServiceProperties.monitorTask.delay).inWholeMilliseconds,
+            TimeUnit.MILLISECONDS
+        )
     }
     
     @PreDestroy
@@ -49,10 +52,7 @@ class BossddDataService(
     }
     
     private fun checkLogin() {
-        val url = """
-            https://www.zhipin.com/web/geek/job?query=${bossddProperties.searchWord}|
-            &city=${bossddProperties.cityCode}|
-        """.singleLine()
+        val url = "https://www.zhipin.com/web/geek/job"
         repeat(2) {
             browserService.waitForJsResult<String>(url, "document.cookie").let {
                 val cookie = WebUtils.cookieStringToMap(it)
