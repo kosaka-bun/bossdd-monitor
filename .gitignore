@@ -1,9 +1,10 @@
-.gradle
+.gradle/
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 application-prod.yml
 application-test.yml
+/files/dev-data/private.sql
 
 ### IntelliJ IDEA ###
 .idea/

@@ -9,6 +9,11 @@ data class JobInfo(
     var id: Long? = null,
     
     /**
+     * 平台名称
+     */
+    var platform: PlatformEnum? = null,
+    
+    /**
      * 平台岗位ID
      */
     var platformJobId: String? = null,
@@ -87,4 +92,10 @@ data class JobInfo(
      * 岗位地址（经纬度）
      */
     var gpsLocation: String? = null
-)
+) {
+    
+    enum class PlatformEnum {
+        
+        BOSSDD
+    }
+}

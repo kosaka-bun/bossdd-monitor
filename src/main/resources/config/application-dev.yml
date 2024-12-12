@@ -7,8 +7,8 @@ spring:
 
 honoka:
   qqrobot:
-    admin-qq: 123456
-    developing-group: 123456
+    admin-qq: 12345
+    developing-group: 10000
     framework:
       # 指定一个机器人框架的实现
       impl: onebot

@@ -2,6 +2,7 @@ package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.common.GlobalComponents
 import de.honoka.bossddmonitor.config.property.DataServiceProperties
+import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.sdk.spring.starter.core.web.WebUtils
 import de.honoka.sdk.util.kotlin.code.log
 import jakarta.annotation.PreDestroy
@@ -14,8 +15,9 @@ import kotlin.time.Duration
 
 @Service
 class BossddDataService(
+    private val dataServiceProperties: DataServiceProperties,
     private val browserService: BrowserService,
-    private val dataServiceProperties: DataServiceProperties
+    private val subscriptionService: SubscriptionService
 ) : ApplicationRunner {
     
     private var runningTask: ScheduledFuture<*>? = null
@@ -26,11 +28,7 @@ class BossddDataService(
     fun startup() {
         stop()
         val action = {
-            try {
-                doTask()
-            } catch(t: Throwable) {
-                log.error("", t)
-            }
+            runCatching { doTask() }.getOrElse { log.error("", it) }
         }
         runningTask = GlobalComponents.scheduledExecutor.scheduleWithFixedDelay(
             action,
@@ -49,6 +47,9 @@ class BossddDataService(
     
     private fun doTask() {
         checkLogin()
+        subscriptionService.list().forEach {
+            runCatching { doMonitor(it) }.getOrElse { log.error("", it) }
+        }
     }
     
     private fun checkLogin() {
@@ -78,5 +79,9 @@ class BossddDataService(
                 break
             }
         }
+    }
+    
+    private fun doMonitor(subscription: Subscription) {
+        //println(subscription)
     }
 }
