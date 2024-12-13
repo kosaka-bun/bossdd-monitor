@@ -54,9 +54,9 @@ data class JobInfo(
     var hrName: String? = null,
     
     /**
-     * HR活跃度
+     * HR是否在线
      */
-    var hrActiveness: String? = null,
+    var hrOnline: Boolean? = null,
     
     /**
      * 薪资范围

@@ -6,6 +6,7 @@ create table subscription
     receiver_group_id bigint comment '接收推送消息的群号（若为空则使用私聊进行推送）',
     search_word       varchar(255) comment '搜索关键词',
     city_code         varchar(255) comment '城市代码',
+    min_company_scale int comment '岗位的最小公司规模',
     user_gps_location varchar(255) comment '用户住址（经纬度）'
 ) comment '用户订阅配置表';
 
@@ -22,7 +23,7 @@ create table job_info
     company_full_name varchar(255) comment '公司名',
     company_scale     varchar(255) comment '公司规模',
     hr_name           varchar(255) comment 'HR姓名',
-    hr_activeness     varchar(255) comment 'HR活跃度',
+    hr_online         tinyint comment 'HR是否在线',
     salary            varchar(255) comment '薪资范围',
     experience        varchar(255) comment '经验要求',
     edu_degree        varchar(255) comment '学历要求',
@@ -31,6 +32,7 @@ create table job_info
     address           varchar(255) comment '岗位地址',
     gps_location      varchar(255) comment '岗位地址（经纬度）'
 ) comment '岗位信息表';
+create unique index job_info_index_1 on job_info (platform, platform_job_id);
 
 drop table if exists job_push_record;
 create table job_push_record

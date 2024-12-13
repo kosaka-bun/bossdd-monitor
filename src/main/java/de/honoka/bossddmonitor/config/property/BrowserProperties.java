@@ -11,6 +11,8 @@ import java.nio.file.Paths;
 @Data
 public class BrowserProperties {
     
+    private boolean disableHeadlessMode = false;
+    
     private UserDataDir userDataDir = new UserDataDir();
     
     @Data

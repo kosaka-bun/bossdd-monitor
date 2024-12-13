@@ -29,6 +29,11 @@ data class Subscription(
     var cityCode: String? = null,
     
     /**
+     * 岗位的最小公司规模
+     */
+    var minCompanyScale: Int? = null,
+    
+    /**
      * 用户住址（经纬度）
      */
     var userGpsLocation: String? = null

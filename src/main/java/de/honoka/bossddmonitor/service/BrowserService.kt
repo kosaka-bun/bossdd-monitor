@@ -1,9 +1,7 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.config.property.BrowserProperties
-import de.honoka.sdk.util.kotlin.code.exception
-import de.honoka.sdk.util.kotlin.code.log
-import de.honoka.sdk.util.kotlin.code.tryBlock
+import de.honoka.sdk.util.kotlin.code.*
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
@@ -39,6 +37,8 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     private val urlPrefixToResponseMap = ConcurrentHashMap<String, MutableList<String>>()
     
+    private var hasBeenShutdown = false
+    
     @PostConstruct
     private fun init() {
         disableSeleniumLog()
@@ -48,7 +48,11 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     }
     
     @PreDestroy
-    private fun stop() = closeBrowser()
+    private fun stop() {
+        hasBeenShutdown = true
+        executor.shutdownNowAndWait()
+        closeBrowser()
+    }
     
     private fun disableSeleniumLog() {
         val classes = listOf(
@@ -65,12 +69,14 @@ class BrowserService(private val browserProperties: BrowserProperties) {
         Thread.setDefaultUncaughtExceptionHandler { _, _ -> }
     }
     
-    private fun moveBrowserToCenter() = browser.manage().window().run {
-        size = Dimension(1280, 850)
-        val screenSize = Toolkit.getDefaultToolkit().screenSize
-        val left = (screenSize.width - size.width) / 2
-        val top = (screenSize.height - size.height) / 2
-        position = Point(left, top)
+    private fun moveBrowserToCenter() {
+        browser.manage().window().run {
+            size = Dimension(1280, 850)
+            val screenSize = Toolkit.getDefaultToolkit().screenSize
+            val left = (screenSize.width - size.width) / 2
+            val top = (screenSize.height - size.height) / 2
+            position = Point(left, top)
+        }
     }
     
     private fun handleResponse(devTools: DevTools, event: ResponseReceived) {
@@ -83,16 +89,18 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     @Synchronized
     fun initBrowser(headless: Boolean = true) {
+        if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
+        val realHeadless = headless && !browserProperties.isDisableHeadlessMode
         closeBrowser()
         val options = ChromeOptions().apply {
             val userDataDir = browserProperties.userDataDir.absolutePath
             log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
             addArguments("--user-data-dir=$userDataDir")
-            if(headless) addArguments("--headless")
+            if(realHeadless) addArguments("--headless")
         }
         browserOrNull = ChromeDriver(options)
         browser.setLogLevel(Level.OFF)
-        if(!headless) moveBrowserToCenter()
+        if(!realHeadless) moveBrowserToCenter()
         browser.devTools.run {
             createSession()
             send(Network.enable(Optional.empty(), Optional.empty(), Optional.empty()))
@@ -129,9 +137,10 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     }
     
     @Synchronized
-    fun loadPage(url: String) {
+    fun loadPage(url: String, waitMillisAfterLoad: Long = 0) {
         loadBlankPage(500)
         browser.get(url)
+        TimeUnit.MILLISECONDS.sleep(waitMillisAfterLoad)
     }
     
     @Synchronized
@@ -162,7 +171,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             }
             try {
                 urlPrefixToResponseMap[urlPrefixToWait] = resultList
-                return executor.submit(action).get(10, TimeUnit.SECONDS)
+                return executor.submit(action).getOrCancel(10, TimeUnit.SECONDS)
             } finally {
                 urlPrefixToResponseMap.remove(urlPrefixToWait)
             }
@@ -177,7 +186,8 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     @Synchronized
     fun <T> waitForJsResultOrNull(
         urlToLoad: String,
-        @Language("JavaScript") jsExpression: String,
+        @Language("JavaScript")
+        jsExpression: String,
         resultPredicate: ((T?) -> Boolean)? = null,
         continueWaitOnResultIsNull: Boolean = false
     ): T? {
@@ -207,22 +217,23 @@ class BrowserService(private val browserProperties: BrowserProperties) {
                 if(!hasResult) error("Cannot get the result of JavaScript expression: $jsExpression")
                 result
             })
-            return future.get(10, TimeUnit.SECONDS)
+            return future.getOrCancel(10, TimeUnit.SECONDS)
         }
     }
     
     @Synchronized
     fun <T> waitForJsResult(
         urlToLoad: String,
-        @Language("JavaScript") jsExpression: String,
+        @Language("JavaScript")
+        jsExpression: String,
         resultPredicate: ((T) -> Boolean)? = null,
         continueWaitOnResultIsNull: Boolean = true
-    ): T = run {
+    ): T {
         var newResultPredicate: ((T?) -> Boolean)? = null
         resultPredicate?.let { p ->
             newResultPredicate = { p(it!!) }
         }
-        waitForJsResultOrNull(urlToLoad, jsExpression, newResultPredicate, continueWaitOnResultIsNull)!!
+        return waitForJsResultOrNull(urlToLoad, jsExpression, newResultPredicate, continueWaitOnResultIsNull)!!
     }
     
     fun checkIsActive() {

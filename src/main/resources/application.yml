@@ -18,6 +18,11 @@ spring:
     date-format: yyyy-MM-dd HH:mm:ss
     time-zone: GMT+8
 
+honoka:
+  starter:
+    mybatis:
+      enabled: true
+
 mybatis-plus:
   # classpath*:mapper/**/*.xml为默认值，默认扫描resources/mapper目录及其子目录下所有xml文件
   mapper-locations: classpath*:mapper/**/*.xml
