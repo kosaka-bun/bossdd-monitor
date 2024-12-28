@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.dependency.management)
     alias(libs.plugins.spring.boot)
     alias(libs.plugins.kotlin)
+    alias(libs.plugins.kotlin.kapt)
     /*
      * Lombok Kotlin compiler plugin is an experimental feature.
      * See: https://kotlinlang.org/docs/components-stability.html.
@@ -42,7 +43,7 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.flywaydb:flyway-core")
     implementation("org.seleniumhq.selenium:selenium-java")
-    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
+    kapt("org.springframework.boot:spring-boot-configuration-processor")
     libs.lombok.let {
         compileOnly(it)
         annotationProcessor(it)
@@ -57,16 +58,20 @@ tasks {
     compileJava {
         options.run {
             encoding = StandardCharsets.UTF_8.name()
-            compilerArgs.run {
-                add("-parameters")
-            }
+            val compilerArgs = compilerArgs as MutableCollection<String>
+            compilerArgs += listOf(
+                "-parameters"
+            )
         }
     }
 
     withType<KotlinCompile> {
-        kotlinOptions.run {
+        kotlinOptions {
             jvmTarget = java.sourceCompatibility.toString()
-            freeCompilerArgs += "-Xjvm-default=all-compatibility"
+            freeCompilerArgs += listOf(
+                "-Xjsr305=strict",
+                "-Xjvm-default=all"
+            )
         }
     }
     
@@ -77,4 +82,8 @@ tasks {
     test {
         useJUnitPlatform()
     }
+}
+
+kapt {
+    keepJavacAnnotationProcessors = true
 }

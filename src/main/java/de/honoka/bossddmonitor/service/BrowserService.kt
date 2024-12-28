@@ -46,7 +46,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     @PostConstruct
     private fun init() {
         disableSeleniumLog()
-        if(browserProperties.userDataDir.isClearOnStartup) {
+        if(browserProperties.userDataDir.clearOnStartup) {
             clearUserDataDir()
         }
     }
