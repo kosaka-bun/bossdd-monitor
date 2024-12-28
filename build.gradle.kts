@@ -42,10 +42,7 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.flywaydb:flyway-core")
     implementation("org.seleniumhq.selenium:selenium-java")
-    "org.springframework.boot:spring-boot-configuration-processor".let {
-        compileOnly(it)
-        annotationProcessor(it)
-    }
+    annotationProcessor("org.springframework.boot:spring-boot-configuration-processor")
     libs.lombok.let {
         compileOnly(it)
         annotationProcessor(it)
@@ -67,7 +64,10 @@ tasks {
     }
 
     withType<KotlinCompile> {
-        kotlinOptions.jvmTarget = java.sourceCompatibility.toString()
+        kotlinOptions.run {
+            jvmTarget = java.sourceCompatibility.toString()
+            freeCompilerArgs += "-Xjvm-default=all-compatibility"
+        }
     }
     
     bootJar {
