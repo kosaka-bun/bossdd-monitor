@@ -3,8 +3,8 @@ package de.honoka.bossddmonitor.config
 import de.honoka.bossddmonitor.common.GlobalComponents
 import de.honoka.bossddmonitor.config.property.BrowserProperties
 import de.honoka.bossddmonitor.config.property.DataServiceProperties
-import de.honoka.sdk.util.kotlin.code.log
-import de.honoka.sdk.util.kotlin.code.shutdownNowAndWait
+import de.honoka.sdk.util.kotlin.basic.log
+import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.springframework.boot.context.properties.EnableConfigurationProperties

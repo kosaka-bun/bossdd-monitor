@@ -1,7 +1,11 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.config.property.BrowserProperties
-import de.honoka.sdk.util.kotlin.code.*
+import de.honoka.sdk.util.kotlin.basic.exception
+import de.honoka.sdk.util.kotlin.basic.log
+import de.honoka.sdk.util.kotlin.basic.tryBlock
+import de.honoka.sdk.util.kotlin.concurrent.getOrCancel
+import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
@@ -66,7 +70,9 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             }
             logger.level = Level.OFF
         }
-        Thread.setDefaultUncaughtExceptionHandler { _, _ -> }
+        Thread.setDefaultUncaughtExceptionHandler { t, e ->
+            if(t.name == "main") e.printStackTrace()
+        }
     }
     
     private fun moveBrowserToCenter() {
@@ -88,19 +94,20 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     }
     
     @Synchronized
-    fun initBrowser(headless: Boolean = true) {
+    fun initBrowser() {
         if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
-        val realHeadless = headless && !browserProperties.isDisableHeadlessMode
         closeBrowser()
         val options = ChromeOptions().apply {
             val userDataDir = browserProperties.userDataDir.absolutePath
             log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
             addArguments("--user-data-dir=$userDataDir")
-            if(realHeadless) addArguments("--headless")
         }
         browserOrNull = ChromeDriver(options)
-        browser.setLogLevel(Level.OFF)
-        if(!realHeadless) moveBrowserToCenter()
+        browser.run {
+            setLogLevel(Level.OFF)
+            moveBrowserToCenter()
+            manage().window().minimize()
+        }
         browser.devTools.run {
             createSession()
             send(Network.enable(Optional.empty(), Optional.empty(), Optional.empty()))

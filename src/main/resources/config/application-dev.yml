@@ -19,9 +19,9 @@ honoka:
 
 app:
   browser:
-    disable-headless-mode: true
     user-data-dir:
       path: ./build/selenium/user-data
+    proxy: localhost:10808
   data-service:
     monitor-task:
       initial-delay: 0s

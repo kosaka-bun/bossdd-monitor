@@ -6,7 +6,7 @@ import de.honoka.bossddmonitor.config.property.DataServiceProperties
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.sdk.spring.starter.core.web.WebUtils
-import de.honoka.sdk.util.kotlin.code.log
+import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.text.*
 import jakarta.annotation.PreDestroy
 import org.jsoup.Jsoup
@@ -26,6 +26,7 @@ class BossddDataService(
     private val exceptionReportService: ExceptionReportService
 ) : ApplicationRunner {
     
+    @Volatile
     private var runningTask: ScheduledFuture<*>? = null
     
     override fun run(args: ApplicationArguments) {
@@ -86,7 +87,7 @@ class BossddDataService(
         }
         log.info("登录态已失效，请在浏览器中手动登录，浏览器将在检测到登录态后关闭")
         browserService.run {
-            initBrowser(false)
+            initBrowser()
             loadPage(url)
             while(true) {
                 TimeUnit.SECONDS.sleep(1)
