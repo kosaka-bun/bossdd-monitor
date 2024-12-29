@@ -7,6 +7,7 @@ import de.honoka.bossddmonitor.service.JobInfoService
 import de.honoka.sdk.util.kotlin.text.*
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Component
+import java.util.*
 
 @Component
 class BossddPlatform(
@@ -62,6 +63,8 @@ class BossddPlatform(
             eduDegree = it.getStr("jobDegree")
             tags = it.getArray("skills").toString()
             gpsLocation = "${it.getStr("gps.longitude")},${it.getStr("gps.latitude")}"
+            createTime = Date()
+            updateTime = createTime
         }
         val urlPrefix = "https://www.zhipin.com/job_detail/$platformJobId.html"
         val url = "$urlPrefix?lid=${identifiersMap["lid"]}&securityId=${identifiersMap["securityId"]}"
@@ -72,6 +75,7 @@ class BossddPlatform(
                 getElementsByTag("span").forEach { it.remove() }
                 text().trim()
             }
+            hrLiveness = doc.expectFirst("span.boss-active-time").text().trim()
             details = doc.expectFirst("div.job-sec-text").html().process {
                 replace(Regex("<br\\s?/?>"), "\n")
                 replace(Regex("\n\n\n+"), "\n\n")
@@ -84,6 +88,7 @@ class BossddPlatform(
     private fun parseIncrementJobInfo(jsonWrapper: JsonWrapper): JobInfo = JobInfo().apply {
         jsonWrapper.let {
             hrOnline = it.getBool("bossOnline")
+            updateTime = Date()
         }
     }
 }

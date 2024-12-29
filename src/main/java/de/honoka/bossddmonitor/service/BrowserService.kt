@@ -7,6 +7,7 @@ import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.basic.tryBlock
 import de.honoka.sdk.util.kotlin.concurrent.getOrCancel
 import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
+import de.honoka.sdk.util.kotlin.net.socket.SocketForwarder
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
@@ -34,6 +35,8 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     val browser: ChromeDriver
         get() = browserOrNull!!
+    
+    private val proxy = browserProperties.proxy?.let { SocketForwarder(setOf(it)) }
     
     private val executor = ThreadPoolExecutor(
         1, 10, 60, TimeUnit.SECONDS,
@@ -73,8 +76,8 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             val userDataDir = browserProperties.userDataDir.absolutePath
             log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
             addArguments("--user-data-dir=$userDataDir")
-            browserProperties.proxy?.let {
-                addArguments("--proxy-server=$it")
+            proxy?.run {
+                addArguments("--proxy-server=localhost:$port")
             }
             val prefs = mapOf("profile.managed_default_content_settings.images" to 2)
             setExperimentalOption("prefs", prefs)
@@ -123,6 +126,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     }
     
     private fun loadPage(url: String, waitMillisAfterLoad: Long = 0) {
+        proxy?.closeAllConnections()
         loadBlankPage()
         browser.get(url)
         Thread.sleep(waitMillisAfterLoad)
@@ -133,7 +137,6 @@ class BrowserService(private val browserProperties: BrowserProperties) {
         urlToLoad: String, urlPrefixToWait: String, resultPredicate: ((String) -> Boolean)? = null
     ): String {
         tryBlock(3) {
-            if(isOnErrorPage()) initBrowser()
             val resultList = Collections.synchronizedList(LinkedList<String>())
             val action = Callable {
                 var result: String? = null

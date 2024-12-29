@@ -24,13 +24,16 @@ create table job_info
     company_scale     varchar(255) comment '公司规模',
     hr_name           varchar(255) comment 'HR姓名',
     hr_online         tinyint comment 'HR是否在线',
+    hr_liveness       varchar(255) comment 'HR活跃度',
     salary            varchar(255) comment '薪资范围',
     experience        varchar(255) comment '经验要求',
     edu_degree        varchar(255) comment '学历要求',
     tags              text comment '岗位标签（json）',
     details           text comment '岗位详细描述',
     address           varchar(255) comment '岗位地址',
-    gps_location      varchar(255) comment '岗位地址（经纬度）'
+    gps_location      varchar(255) comment '岗位地址（经纬度）',
+    create_time       datetime,
+    update_time       datetime
 ) comment '岗位信息表';
 create unique index job_info_index_1 on job_info (platform, platform_job_id);
 

@@ -3,6 +3,7 @@ package de.honoka.bossddmonitor.entity
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableId
 import de.honoka.bossddmonitor.platform.PlatformEnum
+import java.util.*
 
 data class JobInfo(
     
@@ -60,6 +61,11 @@ data class JobInfo(
     var hrOnline: Boolean? = null,
     
     /**
+     * HR活跃度
+     */
+    var hrLiveness: String? = null,
+    
+    /**
      * 薪资范围
      */
     var salary: String? = null,
@@ -92,5 +98,9 @@ data class JobInfo(
     /**
      * 岗位地址（经纬度）
      */
-    var gpsLocation: String? = null
+    var gpsLocation: String? = null,
+    
+    var createTime: Date? = null,
+    
+    var updateTime: Date? = null
 )
