@@ -9,7 +9,11 @@ class BrowserProperties(
     
     var userDataDir: UserDataDir = UserDataDir(),
     
-    var proxy: String? = null
+    var proxy: String? = null,
+    
+    var blockUrlKeywords: List<String> = listOf(),
+    
+    var errorPageDetection: ErrorPageDetection = ErrorPageDetection()
 ) {
     
     data class UserDataDir(
@@ -29,4 +33,11 @@ class BrowserProperties(
                 return pathObj.toAbsolutePath().normalize().toString()
             }
     }
+    
+    data class ErrorPageDetection(
+        
+        var urlKeywords: List<String> = listOf(),
+        
+        var selectors: List<String> = listOf()
+    )
 }

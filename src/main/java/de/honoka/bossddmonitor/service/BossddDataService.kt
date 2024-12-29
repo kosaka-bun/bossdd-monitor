@@ -1,12 +1,9 @@
 package de.honoka.bossddmonitor.service
 
-import cn.hutool.core.util.RandomUtil
 import de.honoka.bossddmonitor.common.GlobalComponents
 import de.honoka.bossddmonitor.config.property.DataServiceProperties
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
-import de.honoka.sdk.spring.starter.core.web.WebUtils
-import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.text.*
 import jakarta.annotation.PreDestroy
 import org.jsoup.Jsoup
@@ -60,14 +57,7 @@ class BossddDataService(
         }
     }
     
-    @Suppress("SameParameterValue")
-    private fun randomSleep(min: Long, max: Long) {
-        TimeUnit.SECONDS.sleep(RandomUtil.randomLong(min, max))
-    }
-    
     private fun doTask() {
-        checkLogin()
-        randomSleep(2, 5)
         subscriptionService.list().forEach {
             runCatching {
                 doMonitoring(it)
@@ -77,46 +67,17 @@ class BossddDataService(
         }
     }
     
-    private fun checkLogin() {
-        val url = "https://www.zhipin.com/web/geek/job"
-        repeat(2) {
-            browserService.waitForJsResult<String>(url, "document.cookie").let {
-                val cookie = WebUtils.cookieStringToMap(it)
-                if(cookie.containsKey("bst")) return
-            }
-        }
-        log.info("登录态已失效，请在浏览器中手动登录，浏览器将在检测到登录态后关闭")
-        browserService.run {
-            initBrowser()
-            loadPage(url)
-            while(true) {
-                TimeUnit.SECONDS.sleep(1)
-                try {
-                    val cookie = executeJsExpression<String>("document.cookie")?.let {
-                        WebUtils.cookieStringToMap(it)
-                    }
-                    if(cookie?.containsKey("bst") != true) continue
-                } catch(t: Throwable) {
-                    browserService.checkIsActive()
-                    continue
-                }
-                initBrowser()
-                break
-            }
-        }
-    }
-    
     private fun doMonitoring(subscription: Subscription) {
         fun url(page: Int) = """
-            https://www.zhipin.com/web/geek/job?query=${subscription.searchWord}
-            &city=${subscription.cityCode}&page=$page
-        """.simpleSingleLine()
+            https://www.zhipin.com/web/geek/job?query=${subscription.searchWord}&
+            city=${subscription.cityCode}&page=$page
+        """.singleLine()
         val apiUrl = "https://www.zhipin.com/wapi/zpgeek/search/joblist.json"
         repeat(10) {
+            browserService.ensureIsActive()
             val res = browserService.waitForResponse(url(it + 1), apiUrl) { r ->
                 r.toJsonWrapper().getInt("code") == 0
             }
-            randomSleep(2, 5)
             res.toJsonWrapper().getArray("zpData.jobList").forEachWrapper {
                 runCatching {
                     val platform = JobInfo.PlatformEnum.BOSSDD
@@ -158,7 +119,6 @@ class BossddDataService(
         val urlPrefix = "https://www.zhipin.com/job_detail/$platformJobId.html"
         val url = "$urlPrefix?lid=${identifiersMap["lid"]}&securityId=${identifiersMap["securityId"]}"
         val html = browserService.waitForResponse(url, urlPrefix)
-        randomSleep(2, 5)
         val doc = Jsoup.parse(html)
         jsonWrapper.let {
             companyFullName = doc.expectFirst("li.company-name").run {

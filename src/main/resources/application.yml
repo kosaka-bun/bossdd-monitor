@@ -28,3 +28,18 @@ mybatis-plus:
   mapper-locations: classpath*:mapper/**/*.xml
   configuration:
     map-underscore-to-camel-case: true
+
+app:
+  browser:
+    block-url-keywords:
+      - /zpCommon/data/cityGroup.json
+      - /zpCommon/data/getCityShowPosition
+      - /zpgeek/qrcode/generate.json
+      - /common/data/city/site.json
+      - /zpweixin/qrcode/getqrcode
+      - /zpCommon/data/city.json
+    error-page-detection:
+      url-keywords:
+        - /web/user/safe/verify-slider
+      selectors:
+        - .wrap-verify-slider
