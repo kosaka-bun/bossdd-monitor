@@ -1,7 +1,7 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.common.GlobalComponents
-import de.honoka.bossddmonitor.config.property.DataServiceProperties
+import de.honoka.bossddmonitor.config.DataServiceProperties
 import de.honoka.bossddmonitor.platform.Platform
 import jakarta.annotation.PreDestroy
 import org.springframework.boot.ApplicationArguments

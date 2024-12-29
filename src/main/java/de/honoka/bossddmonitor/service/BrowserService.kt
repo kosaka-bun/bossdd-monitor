@@ -1,6 +1,6 @@
 package de.honoka.bossddmonitor.service
 
-import de.honoka.bossddmonitor.config.property.BrowserProperties
+import de.honoka.bossddmonitor.config.BrowserProperties
 import de.honoka.sdk.util.kotlin.basic.exception
 import de.honoka.sdk.util.kotlin.basic.forEachCatching
 import de.honoka.sdk.util.kotlin.basic.log
