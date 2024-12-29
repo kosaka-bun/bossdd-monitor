@@ -71,17 +71,21 @@ class BossddPlatform(
         val html = browserService.waitForResponse(url, urlPrefix)
         val doc = Jsoup.parse(html)
         jsonWrapper.let {
-            companyFullName = doc.expectFirst("li.company-name").run {
+            companyFullName = doc.selectFirst("li.company-name")?.run {
                 getElementsByTag("span").forEach { it.remove() }
                 text().trim()
             }
-            hrLiveness = doc.expectFirst("span.boss-active-time").text().trim()
-            details = doc.expectFirst("div.job-sec-text").html().process {
-                replace(Regex("<br\\s?/?>"), "\n")
+            hrLiveness = doc.selectFirst("span.boss-active-time")?.run {
+                text().trim()
+            }
+            details = doc.selectFirst("div.job-sec-text")?.html()?.process {
+                replace(Regex("\\s*<br\\s?/?>\\s*"), "\n")
                 replace(Regex("\n\n\n+"), "\n\n")
                 trim()
             }
-            address = doc.expectFirst("div.location-address").text().trim()
+            address = doc.selectFirst("div.location-address")?.run {
+                text().trim()
+            }
         }
     }
     

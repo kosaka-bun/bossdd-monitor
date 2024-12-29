@@ -24,7 +24,6 @@ import java.awt.Toolkit
 import java.io.File
 import java.util.*
 import java.util.concurrent.*
-import java.util.concurrent.ThreadPoolExecutor.AbortPolicy
 import java.util.logging.Level
 import java.util.logging.Logger
 
@@ -38,10 +37,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     private val proxy = browserProperties.proxy?.let { SocketForwarder(setOf(it)) }
     
-    private val executor = ThreadPoolExecutor(
-        1, 10, 60, TimeUnit.SECONDS,
-        SynchronousQueue(), AbortPolicy()
-    )
+    private val executor = Executors.newFixedThreadPool(1)
     
     @Volatile
     private lateinit var urlPrefixToResponseMap: ConcurrentMap<String, MutableList<String>>
@@ -214,16 +210,17 @@ class BrowserService(private val browserProperties: BrowserProperties) {
         val url = event.response.url
         urlPrefixToResponseMap.forEach { (k, v) ->
             if(!url.startsWith(k)) return@forEach
-            val response = tryBlock(10) {
-                if(Thread.currentThread().isInterrupted) return
-                try {
-                    devTools.send(Network.getResponseBody(event.requestId)).body
-                } catch(t: Throwable) {
-                    Thread.sleep(100)
-                    throw t
+            val response = run {
+                repeat(50) {
+                    if(Thread.currentThread().isInterrupted) return
+                    try {
+                        return@run devTools.send(Network.getResponseBody(event.requestId)).body
+                    } catch(t: Throwable) {
+                        Thread.sleep(100)
+                    }
                 }
             }
-            v.add(response)
+            response?.let { v.add(it as String) }
         }
     }
     
