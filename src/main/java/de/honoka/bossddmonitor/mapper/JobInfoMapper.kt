@@ -2,7 +2,7 @@ package de.honoka.bossddmonitor.mapper
 
 import com.baomidou.mybatisplus.core.mapper.BaseMapper
 import de.honoka.bossddmonitor.entity.JobInfo
-import de.honoka.bossddmonitor.entity.JobInfo.PlatformEnum
+import de.honoka.bossddmonitor.platform.PlatformEnum
 import de.honoka.sdk.spring.starter.mybatis.queryChainWrapper
 import org.apache.ibatis.annotations.Mapper
 

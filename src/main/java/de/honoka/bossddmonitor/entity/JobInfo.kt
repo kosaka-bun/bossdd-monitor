@@ -2,6 +2,7 @@ package de.honoka.bossddmonitor.entity
 
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableId
+import de.honoka.bossddmonitor.platform.PlatformEnum
 
 data class JobInfo(
     
@@ -92,10 +93,4 @@ data class JobInfo(
      * 岗位地址（经纬度）
      */
     var gpsLocation: String? = null
-) {
-    
-    enum class PlatformEnum {
-        
-        BOSSDD
-    }
-}
+)

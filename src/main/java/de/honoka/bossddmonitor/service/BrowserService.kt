@@ -63,12 +63,11 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     @Synchronized
     fun initBrowser() {
-        initBrowserNoLock()
-    }
-    
-    private fun initBrowserNoLock() {
         if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
-        closeBrowser()
+        browserOrNull?.let {
+            closeBrowser()
+            TimeUnit.SECONDS.sleep(3)
+        }
         urlPrefixToResponseMap = ConcurrentHashMap()
         val options = ChromeOptions().apply {
             val userDataDir = browserProperties.userDataDir.absolutePath
@@ -117,24 +116,14 @@ class BrowserService(private val browserProperties: BrowserProperties) {
         if(dir.exists()) dir.deleteRecursively()
     }
     
-    @Synchronized
-    fun loadBlankPage(waitMillisAfterLoad: Long = 0) {
-        loadBlankPageNoLock(waitMillisAfterLoad)
-    }
-    
-    private fun loadBlankPageNoLock(waitMillisAfterLoad: Long = 0) {
-        browserOrNull ?: initBrowserNoLock()
+    private fun loadBlankPage() {
+        browserOrNull ?: initBrowser()
         browser.get("about:blank")
-        Thread.sleep(waitMillisAfterLoad)
+        Thread.sleep(500)
     }
     
-    @Synchronized
-    fun loadPage(url: String, waitMillisAfterLoad: Long = 0) {
-        loadPageNoLock(url, waitMillisAfterLoad)
-    }
-    
-    private fun loadPageNoLock(url: String, waitMillisAfterLoad: Long = 0) {
-        loadBlankPageNoLock(500)
+    private fun loadPage(url: String, waitMillisAfterLoad: Long = 0) {
+        loadBlankPage()
         browser.get(url)
         Thread.sleep(waitMillisAfterLoad)
     }
@@ -148,7 +137,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             val resultList = Collections.synchronizedList(LinkedList<String>())
             val action = Callable {
                 var result: String? = null
-                loadPageNoLock(urlToLoad)
+                loadPage(urlToLoad)
                 outer@
                 for(i in 1..60) {
                     Thread.sleep(500)
@@ -178,58 +167,6 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     @Suppress("UNCHECKED_CAST")
     fun <T> executeJsExpression(@Language("JavaScript") jsExpression: String): T? = run {
         browser.executeScript("return $jsExpression") as T?
-    }
-    
-    @Synchronized
-    fun <T> waitForJsResultOrNull(
-        urlToLoad: String,
-        @Language("JavaScript")
-        jsExpression: String,
-        resultPredicate: ((T?) -> Boolean)? = null,
-        continueWaitOnResultIsNull: Boolean = false
-    ): T? {
-        tryBlock(3) {
-            val future = executor.submit(Callable {
-                var result: T? = null
-                var hasResult = false
-                loadPageNoLock(urlToLoad)
-                for(i in 1..20) {
-                    Thread.sleep(500)
-                    try {
-                        val r = executeJsExpression<T>(jsExpression)
-                        if(r == null && continueWaitOnResultIsNull) continue
-                        val shouldTake = resultPredicate == null || runCatching {
-                            resultPredicate(r)
-                        }.getOrDefault(false)
-                        if(shouldTake) {
-                            result = r
-                            hasResult = true
-                            break
-                        }
-                    } catch(t: Throwable) {
-                        //ignore
-                    }
-                }
-                if(!hasResult) error("Cannot get the result of JavaScript expression: $jsExpression")
-                result
-            })
-            return future.getOrCancel(10, TimeUnit.SECONDS)
-        }
-    }
-    
-    @Synchronized
-    fun <T> waitForJsResult(
-        urlToLoad: String,
-        @Language("JavaScript")
-        jsExpression: String,
-        resultPredicate: ((T) -> Boolean)? = null,
-        continueWaitOnResultIsNull: Boolean = true
-    ): T {
-        var newResultPredicate: ((T?) -> Boolean)? = null
-        resultPredicate?.let { p ->
-            newResultPredicate = { p(it!!) }
-        }
-        return waitForJsResultOrNull(urlToLoad, jsExpression, newResultPredicate, continueWaitOnResultIsNull)!!
     }
     
     @Synchronized
@@ -272,17 +209,18 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     private fun handleResponse(devTools: DevTools, event: ResponseReceived) {
         val url = event.response.url
-        val response = tryBlock(10) {
-            if(Thread.currentThread().isInterrupted) return
-            try {
-                devTools.send(Network.getResponseBody(event.requestId)).body
-            } catch(t: Throwable) {
-                Thread.sleep(100)
-                throw t
-            }
-        }
         urlPrefixToResponseMap.forEach { (k, v) ->
-            if(url.startsWith(k)) v.add(response)
+            if(!url.startsWith(k)) return@forEach
+            val response = tryBlock(10) {
+                if(Thread.currentThread().isInterrupted) return
+                try {
+                    devTools.send(Network.getResponseBody(event.requestId)).body
+                } catch(t: Throwable) {
+                    Thread.sleep(100)
+                    throw t
+                }
+            }
+            v.add(response)
         }
     }
     

@@ -1,73 +1,20 @@
-package de.honoka.bossddmonitor.service
+package de.honoka.bossddmonitor.platform
 
-import de.honoka.bossddmonitor.common.GlobalComponents
-import de.honoka.bossddmonitor.config.property.DataServiceProperties
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
+import de.honoka.bossddmonitor.service.BrowserService
+import de.honoka.bossddmonitor.service.JobInfoService
 import de.honoka.sdk.util.kotlin.text.*
-import jakarta.annotation.PreDestroy
 import org.jsoup.Jsoup
-import org.springframework.boot.ApplicationArguments
-import org.springframework.boot.ApplicationRunner
-import org.springframework.stereotype.Service
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
+import org.springframework.stereotype.Component
 
-@Service
-class BossddDataService(
-    private val dataServiceProperties: DataServiceProperties,
+@Component
+class BossddPlatform(
     private val browserService: BrowserService,
-    private val subscriptionService: SubscriptionService,
-    private val jobInfoService: JobInfoService,
-    private val exceptionReportService: ExceptionReportService
-) : ApplicationRunner {
+    private val jobInfoService: JobInfoService
+) : Platform {
     
-    @Volatile
-    private var runningTask: ScheduledFuture<*>? = null
-    
-    override fun run(args: ApplicationArguments) {
-        startup()
-    }
-    
-    @Synchronized
-    fun startup() {
-        stop()
-        val action = {
-            runCatching {
-                doTask()
-            }.getOrElse {
-                exceptionReportService.report(it)
-            }
-        }
-        runningTask = GlobalComponents.scheduledExecutor.scheduleWithFixedDelay(
-            action,
-            Duration.parse(dataServiceProperties.monitorTask.initialDelay).inWholeMilliseconds,
-            Duration.parse(dataServiceProperties.monitorTask.delay).inWholeMilliseconds,
-            TimeUnit.MILLISECONDS
-        )
-    }
-    
-    @PreDestroy
-    @Synchronized
-    fun stop() {
-        runningTask?.run {
-            cancel(true)
-            runningTask = null
-        }
-    }
-    
-    private fun doTask() {
-        subscriptionService.list().forEach {
-            runCatching {
-                doMonitoring(it)
-            }.getOrElse {
-                exceptionReportService.report(it)
-            }
-        }
-    }
-    
-    private fun doMonitoring(subscription: Subscription) {
+    override fun doDataExtracting(subscription: Subscription) {
         fun url(page: Int) = """
             https://www.zhipin.com/web/geek/job?query=${subscription.searchWord}&
             city=${subscription.cityCode}&page=$page
@@ -80,7 +27,7 @@ class BossddDataService(
             }
             res.toJsonWrapper().getArray("zpData.jobList").forEachWrapper {
                 runCatching {
-                    val platform = JobInfo.PlatformEnum.BOSSDD
+                    val platform = PlatformEnum.BOSSDD
                     val platformJobId = it.getStr("encryptJobId")
                     jobInfoService.baseMapper.findIdByPlatformJobId(platform, platformJobId)?.run {
                         val incrementJobInfo = parseIncrementJobInfo(it)
@@ -101,7 +48,7 @@ class BossddDataService(
             "securityId" to jsonWrapper.getStr("securityId")
         )
         jsonWrapper.let {
-            platform = JobInfo.PlatformEnum.BOSSDD
+            platform = PlatformEnum.BOSSDD
             platformJobId = it.getStr("encryptJobId")
             identifiers = identifiersMap.toJsonString()
             cityCode = it.getLong("city").toString()
