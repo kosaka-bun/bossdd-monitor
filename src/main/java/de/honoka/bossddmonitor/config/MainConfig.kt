@@ -34,6 +34,8 @@ class BrowserProperties(
     
     var proxy: String? = null,
     
+    var defaultHeadless: Boolean = true,
+    
     var blockUrlKeywords: List<String> = listOf(),
     
     var errorPageDetection: ErrorPageDetection = ErrorPageDetection()

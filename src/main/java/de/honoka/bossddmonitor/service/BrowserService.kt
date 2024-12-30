@@ -8,6 +8,7 @@ import de.honoka.sdk.util.kotlin.basic.tryBlock
 import de.honoka.sdk.util.kotlin.concurrent.getOrCancel
 import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
 import de.honoka.sdk.util.kotlin.net.socket.SocketForwarder
+import de.honoka.sdk.util.kotlin.text.singleLine
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
@@ -29,6 +30,14 @@ import java.util.logging.Logger
 
 @Service
 class BrowserService(private val browserProperties: BrowserProperties) {
+    
+    companion object {
+        
+        private val userAgent = """
+            Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 |
+            (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
+        """.singleLine()
+    }
 
     private var browserOrNull: ChromeDriver? = null
     
@@ -37,7 +46,12 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     private val proxy = browserProperties.proxy?.let { SocketForwarder(setOf(it)) }
     
-    private val executor = Executors.newFixedThreadPool(1)
+    private val waiterExecutor = Executors.newFixedThreadPool(1)
+    
+    private val responseHandlerExecutor = ThreadPoolExecutor(
+        1, 3, 60, TimeUnit.SECONDS,
+        LinkedBlockingQueue()
+    )
     
     @Volatile
     private lateinit var urlPrefixToResponseMap: ConcurrentMap<String, MutableList<String>>
@@ -56,12 +70,13 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     @PreDestroy
     private fun stop() {
         hasBeenShutdown = true
-        executor.shutdownNowAndWait()
+        responseHandlerExecutor.shutdownNowAndWait()
+        waiterExecutor.shutdownNowAndWait()
         closeBrowser()
     }
     
     @Synchronized
-    fun initBrowser() {
+    fun initBrowser(headless: Boolean = browserProperties.defaultHeadless) {
         if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
         browserOrNull?.let {
             closeBrowser()
@@ -72,17 +87,18 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             val userDataDir = browserProperties.userDataDir.absolutePath
             log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
             addArguments("--user-data-dir=$userDataDir")
+            if(headless) addArguments("--headless")
             proxy?.run {
                 addArguments("--proxy-server=localhost:$port")
             }
+            addArguments("--user-agent=$userAgent")
             val prefs = mapOf("profile.managed_default_content_settings.images" to 2)
             setExperimentalOption("prefs", prefs)
         }
         browserOrNull = ChromeDriver(options)
         browser.run {
             setLogLevel(Level.OFF)
-            moveBrowserToCenter()
-            manage().window().minimize()
+            if(!headless) moveBrowserToCenter()
         }
         browser.devTools.run {
             createSession()
@@ -90,12 +106,15 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             val blockUrls = browserProperties.blockUrlKeywords.map { "*$it*" }
             send(Network.setBlockedURLs(blockUrls))
             addListener(Network.responseReceived()) { e ->
-                if(Thread.currentThread().isInterrupted) return@addListener
-                runCatching {
-                    handleResponse(this, e)
+                responseHandlerExecutor.submit {
+                    if(Thread.currentThread().isInterrupted) return@submit
+                    runCatching {
+                        handleResponse(this, e)
+                    }
                 }
             }
         }
+        log.info("Selenium Chrome driver has been initialized.")
     }
     
     @Synchronized
@@ -156,7 +175,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             }
             try {
                 urlPrefixToResponseMap[urlPrefixToWait] = resultList
-                return executor.submit(action).getOrCancel(30, TimeUnit.SECONDS)
+                return waiterExecutor.submit(action).getOrCancel(30, TimeUnit.SECONDS)
             } finally {
                 urlPrefixToResponseMap.remove(urlPrefixToWait)
             }

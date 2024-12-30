@@ -22,6 +22,7 @@ app:
     user-data-dir:
       path: ./build/selenium/user-data
     proxy: localhost:10808
+    default-headless: false
   data-service:
     monitor-task:
       initial-delay: 0s

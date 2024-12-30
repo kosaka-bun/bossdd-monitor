@@ -75,8 +75,14 @@ class BossddPlatform(
                 getElementsByTag("span").forEach { it.remove() }
                 text().trim()
             }
-            hrLiveness = doc.selectFirst("span.boss-active-time")?.run {
-                text().trim()
+            hrLiveness = run {
+                if(doc.selectFirst("span.boss-online-tag") != null) {
+                    "在线"
+                } else {
+                    doc.selectFirst("span.boss-active-time")?.run {
+                        text().trim()
+                    }
+                }
             }
             details = doc.selectFirst("div.job-sec-text")?.html()?.process {
                 replace(Regex("\\s*<br\\s?/?>\\s*"), "\n")
