@@ -39,6 +39,11 @@ data class Subscription(
     var maxSeniorityYears: Int? = null,
     
     /**
+     * 岗位最低薪资待遇（单位：千）
+     */
+    var minSalary: Int? = null,
+    
+    /**
      * 用户住址（经纬度）
      */
     var userGpsLocation: String? = null

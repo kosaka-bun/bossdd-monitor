@@ -8,6 +8,7 @@ create table subscription
     city_code           varchar(255) comment '城市代码',
     min_company_scale   int comment '岗位的最小公司规模',
     max_seniority_years int comment '岗位的最大年限要求',
+    min_salary          int comment '岗位最低薪资待遇（单位：千）',
     user_gps_location   varchar(255) comment '用户住址（经纬度）'
 ) comment '用户订阅配置表';
 

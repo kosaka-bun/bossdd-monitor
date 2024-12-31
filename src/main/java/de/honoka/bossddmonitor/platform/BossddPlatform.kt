@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.platform
 
+import cn.hutool.core.util.ObjectUtil
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.service.BrowserService
@@ -33,14 +34,25 @@ class BossddPlatform(
             5 to "106",
             10 to "107"
         )
+        
+        private val salaryToParamMap = mapOf(
+            0 to "402",
+            3 to "403",
+            5 to "404",
+            10 to "405",
+            20 to "406",
+            50 to "407"
+        )
     }
     
     override fun doDataExtracting(subscription: Subscription) {
-        fun url(page: Int) = """
+        val urlPrefix = """
             https://www.zhipin.com/web/geek/job?query=${subscription.searchWord}&
             city=${subscription.cityCode}&scale=${getScaleParamValue(subscription)}&
-            experience=${getSeniorityYearsParamValue(subscription)}&page=$page
+            experience=${getSeniorityYearsParamValue(subscription)}&jobType=1901&
+            salary=${getSalaryParamValue(subscription)}
         """.singleLine()
+        fun url(page: Int) = "$urlPrefix&page=$page"
         val apiUrl = "https://www.zhipin.com/wapi/zpgeek/search/joblist.json"
         repeat(10) {
             browserService.ensureIsActive()
@@ -58,7 +70,11 @@ class BossddPlatform(
                         return@forEachWrapper
                     }
                     val jobInfo = parseJobInfo(it)
-                    checkJobInfo(jobInfo, subscription)
+                    runCatching {
+                        if(!isJobInfoValid(jobInfo, subscription)) {
+                            return@forEachWrapper
+                        }
+                    }
                     parseJobInfoDetails(jobInfo, it)
                     jobInfoService.save(jobInfo)
                 }
@@ -129,8 +145,15 @@ class BossddPlatform(
         }
     }
     
-    private fun checkJobInfo(jobInfo: JobInfo, subscription: Subscription) {
-    
+    private fun isJobInfoValid(jobInfo: JobInfo, subscription: Subscription): Boolean {
+        val minSalary = jobInfo.minSalary
+        if(!ObjectUtil.hasNull(minSalary, subscription.minSalary)) {
+            if(minSalary!! < subscription.minSalary!!) {
+                return false
+            }
+        }
+        
+        return true
     }
     
     private fun getScaleParamValue(subscription: Subscription): String {
@@ -143,5 +166,11 @@ class BossddPlatform(
         val maxYears = subscription.maxSeniorityYears!!
         val params = seniorityYearsToParamMap.filter { (k) -> k <= maxYears }.values
         return params.joinToString(",")
+    }
+    
+    private fun getSalaryParamValue(subscription: Subscription): String {
+        val minSalary = subscription.minSalary!!
+        val param = salaryToParamMap.entries.firstOrNull { (k) -> k >= minSalary }
+        return param?.value ?: salaryToParamMap.entries.last().value
     }
 }
