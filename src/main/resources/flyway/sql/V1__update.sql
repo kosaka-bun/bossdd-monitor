@@ -1,13 +1,14 @@
 drop table if exists subscription;
 create table subscription
 (
-    id                bigint auto_increment primary key,
-    user_id           bigint comment '用户ID（默认情况下为QQ号）',
-    receiver_group_id bigint comment '接收推送消息的群号（若为空则使用私聊进行推送）',
-    search_word       varchar(255) comment '搜索关键词',
-    city_code         varchar(255) comment '城市代码',
-    min_company_scale int comment '岗位的最小公司规模',
-    user_gps_location varchar(255) comment '用户住址（经纬度）'
+    id                  bigint auto_increment primary key,
+    user_id             bigint comment '用户ID（默认情况下为QQ号）',
+    receiver_group_id   bigint comment '接收推送消息的群号（若为空则使用私聊进行推送）',
+    search_word         varchar(255) comment '搜索关键词',
+    city_code           varchar(255) comment '城市代码',
+    min_company_scale   int comment '岗位的最小公司规模',
+    max_seniority_years int comment '岗位的最大年限要求',
+    user_gps_location   varchar(255) comment '用户住址（经纬度）'
 ) comment '用户订阅配置表';
 
 drop table if exists job_info;

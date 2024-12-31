@@ -34,6 +34,11 @@ data class Subscription(
     var minCompanyScale: Int? = null,
     
     /**
+     * 岗位的最大年限要求
+     */
+    var maxSeniorityYears: Int? = null,
+    
+    /**
      * 用户住址（经纬度）
      */
     var userGpsLocation: String? = null

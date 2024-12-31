@@ -1,6 +1,7 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.config.BrowserProperties
+import de.honoka.sdk.util.concurrent.ThreadPoolUtils
 import de.honoka.sdk.util.kotlin.basic.exception
 import de.honoka.sdk.util.kotlin.basic.forEachCatching
 import de.honoka.sdk.util.kotlin.basic.log
@@ -48,9 +49,8 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     private val waiterExecutor = Executors.newFixedThreadPool(1)
     
-    private val responseHandlerExecutor = ThreadPoolExecutor(
-        1, 3, 60, TimeUnit.SECONDS,
-        LinkedBlockingQueue()
+    private val responseHandlerExecutor = ThreadPoolUtils.newEagerThreadPool(
+        1, 3, 60, TimeUnit.SECONDS
     )
     
     @Volatile

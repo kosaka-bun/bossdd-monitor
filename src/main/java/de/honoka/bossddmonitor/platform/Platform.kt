@@ -6,3 +6,8 @@ interface Platform {
     
     fun doDataExtracting(subscription: Subscription)
 }
+
+enum class PlatformEnum {
+    
+    BOSSDD
+}

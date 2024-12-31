@@ -1,8 +1,8 @@
 package de.honoka.bossddmonitor.common
 
-import de.honoka.sdk.util.kotlin.concurrent.ThreadPoolUtils
+import de.honoka.sdk.util.kotlin.concurrent.ThreadPoolUtilsExt
 
 object GlobalComponents {
     
-    val scheduledExecutor = ThreadPoolUtils.newScheduledPool(2)
+    val scheduledExecutor = ThreadPoolUtilsExt.newScheduledPool(2)
 }

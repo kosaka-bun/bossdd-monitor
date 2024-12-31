@@ -15,10 +15,31 @@ class BossddPlatform(
     private val jobInfoService: JobInfoService
 ) : Platform {
     
+    companion object {
+        
+        private val minScaleToParamMap = mapOf(
+            0 to "301",
+            20 to "302",
+            100 to "303",
+            500 to "304",
+            1000 to "305",
+            10000 to "306"
+        )
+        
+        private val seniorityYearsToParamMap = mapOf(
+            0 to "101,103",
+            1 to "104",
+            3 to "105",
+            5 to "106",
+            10 to "107"
+        )
+    }
+    
     override fun doDataExtracting(subscription: Subscription) {
         fun url(page: Int) = """
             https://www.zhipin.com/web/geek/job?query=${subscription.searchWord}&
-            city=${subscription.cityCode}&page=$page
+            city=${subscription.cityCode}&scale=${getScaleParamValue(subscription)}&
+            experience=${getSeniorityYearsParamValue(subscription)}&page=$page
         """.singleLine()
         val apiUrl = "https://www.zhipin.com/wapi/zpgeek/search/joblist.json"
         repeat(10) {
@@ -37,6 +58,8 @@ class BossddPlatform(
                         return@forEachWrapper
                     }
                     val jobInfo = parseJobInfo(it)
+                    checkJobInfo(jobInfo, subscription)
+                    parseJobInfoDetails(jobInfo, it)
                     jobInfoService.save(jobInfo)
                 }
             }
@@ -66,6 +89,10 @@ class BossddPlatform(
             createTime = Date()
             updateTime = createTime
         }
+    }
+    
+    private fun parseJobInfoDetails(jobInfo: JobInfo, jsonWrapper: JsonWrapper) = jobInfo.run {
+        val identifiersMap = identifiers!!.toJsonObject()
         val urlPrefix = "https://www.zhipin.com/job_detail/$platformJobId.html"
         val url = "$urlPrefix?lid=${identifiersMap["lid"]}&securityId=${identifiersMap["securityId"]}"
         val html = browserService.waitForResponse(url, urlPrefix)
@@ -100,5 +127,21 @@ class BossddPlatform(
             hrOnline = it.getBool("bossOnline")
             updateTime = Date()
         }
+    }
+    
+    private fun checkJobInfo(jobInfo: JobInfo, subscription: Subscription) {
+    
+    }
+    
+    private fun getScaleParamValue(subscription: Subscription): String {
+        val minScale = subscription.minCompanyScale!!
+        val params = minScaleToParamMap.filter { (k) -> k >= minScale }.values
+        return params.joinToString(",")
+    }
+    
+    private fun getSeniorityYearsParamValue(subscription: Subscription): String {
+        val maxYears = subscription.maxSeniorityYears!!
+        val params = seniorityYearsToParamMap.filter { (k) -> k <= maxYears }.values
+        return params.joinToString(",")
     }
 }
