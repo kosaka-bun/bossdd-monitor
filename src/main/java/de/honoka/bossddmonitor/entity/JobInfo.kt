@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableId
 import de.honoka.bossddmonitor.platform.PlatformEnum
 import de.honoka.sdk.util.kotlin.text.findOne
+import de.honoka.sdk.util.kotlin.text.toJsonArray
 import java.util.*
 
 data class JobInfo(
@@ -108,15 +109,33 @@ data class JobInfo(
     
     val minSalary: Int?
         get() = salary?.let {
-            it.findOne("\\d+-\\d+")?.let { r ->
-                val min = r.split("-").firstOrNull()?.toInt() ?: return null
-                if(it.contains("K")) {
-                    min
-                } else if(it.contains("元")) {
-                    min / 1000
-                } else {
-                    null
-                }
+            val range = it.findOne("\\d+-\\d+") ?: return null
+            val min = range.split("-").firstOrNull()?.toInt() ?: return null
+            if(it.contains("K")) {
+                min
+            } else if(it.contains("元")) {
+                min / 1000
+            } else {
+                null
             }
         }
+    
+    fun hasBlockWords(subscription: Subscription): Boolean = subscription.run {
+        val propertiesToCheck = listOf(title, company, companyFullName, tags, details, address)
+        blockWords?.toJsonArray()?.forEach {
+            propertiesToCheck.firstOrNull { s ->
+                s?.contains(it as String) == true
+            }?.let {
+                return true
+            }
+        }
+        blockRegexes?.toJsonArray()?.forEach {
+            propertiesToCheck.firstOrNull { s ->
+                s?.contains(Regex(it as String)) == true
+            }?.let {
+                return true
+            }
+        }
+        return false
+    }
 }

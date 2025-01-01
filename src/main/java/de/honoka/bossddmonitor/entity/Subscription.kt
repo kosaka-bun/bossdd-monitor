@@ -44,6 +44,16 @@ data class Subscription(
     var minSalary: Int? = null,
     
     /**
+     * 岗位信息屏蔽关键词（json）
+     */
+    var blockWords: String? = null,
+    
+    /**
+     * 岗位信息屏蔽正则表达式（json）
+     */
+    var blockRegexes: String? = null,
+    
+    /**
      * 用户住址（经纬度）
      */
     var userGpsLocation: String? = null

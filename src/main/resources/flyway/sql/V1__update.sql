@@ -9,6 +9,8 @@ create table subscription
     min_company_scale   int comment '岗位的最小公司规模',
     max_seniority_years int comment '岗位的最大年限要求',
     min_salary          int comment '岗位最低薪资待遇（单位：千）',
+    block_words         text comment '岗位信息屏蔽关键词（json）',
+    block_regexes       text comment '岗位信息屏蔽正则表达式（json）',
     user_gps_location   varchar(255) comment '用户住址（经纬度）'
 ) comment '用户订阅配置表';
 

@@ -60,6 +60,7 @@ class BossddPlatform(
                 r.toJsonWrapper().getInt("code") == 0
             }
             res.toJsonWrapper().getArray("zpData.jobList").forEachWrapper {
+                if(Thread.currentThread().isInterrupted) return
                 runCatching {
                     val platform = PlatformEnum.BOSSDD
                     val platformJobId = it.getStr("encryptJobId")
@@ -152,8 +153,7 @@ class BossddPlatform(
                 return false
             }
         }
-        
-        return true
+        return !jobInfo.hasBlockWords(subscription)
     }
     
     private fun getScaleParamValue(subscription: Subscription): String {
@@ -170,7 +170,13 @@ class BossddPlatform(
     
     private fun getSalaryParamValue(subscription: Subscription): String {
         val minSalary = subscription.minSalary!!
-        val param = salaryToParamMap.entries.firstOrNull { (k) -> k >= minSalary }
+        val param = salaryToParamMap.entries.run {
+            if(minSalary <= 10) {
+                firstOrNull { it.key >= minSalary }
+            } else {
+                lastOrNull { minSalary >= it.key }
+            }
+        }
         return param?.value ?: salaryToParamMap.entries.last().value
     }
 }
