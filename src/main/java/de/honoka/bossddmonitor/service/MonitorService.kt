@@ -2,6 +2,7 @@ package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.common.GlobalComponents
 import de.honoka.bossddmonitor.config.MonitorProperties
+import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.platform.Platform
 import jakarta.annotation.PreDestroy
 import org.springframework.boot.ApplicationArguments
@@ -15,6 +16,7 @@ import kotlin.time.Duration
 class MonitorService(
     private val monitorProperties: MonitorProperties,
     private val subscriptionService: SubscriptionService,
+    private val jobPushRecordService: JobPushRecordService,
     private val exceptionReportService: ExceptionReportService,
     private val platforms: List<Platform>
 ) : ApplicationRunner {
@@ -55,13 +57,22 @@ class MonitorService(
     
     private fun doTask() {
         subscriptionService.list().forEach {
-            platforms.forEach { p ->
-                runCatching {
-                    p.doDataExtracting(it)
-                }.getOrElse {
-                    exceptionReportService.report(it)
+            runCatching {
+                platforms.forEach { p ->
+                    doDataExtracting(it, p)
                 }
+            }.getOrElse {
+                exceptionReportService.report(it)
             }
+        }
+    }
+    
+    private fun doDataExtracting(subscription: Subscription, platform: Platform) {
+        runCatching {
+            platform.doDataExtracting(subscription)
+            jobPushRecordService.scanJobListAndCreateNewPushRecords(subscription)
+        }.getOrElse {
+            exceptionReportService.report(it)
         }
     }
 }

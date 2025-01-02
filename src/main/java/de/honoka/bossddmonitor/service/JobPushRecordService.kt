@@ -6,21 +6,51 @@ import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.JobPushRecord
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.JobPushRecordMapper
+import de.honoka.sdk.util.kotlin.basic.forEachCatching
 import org.springframework.stereotype.Service
 
 @Service
-class JobPushRecordService : ServiceImpl<JobPushRecordMapper, JobPushRecord>() {
+class JobPushRecordService(
+    private val subscriptionService: SubscriptionService,
+    private val jobInfoService: JobInfoService
+) : ServiceImpl<JobPushRecordMapper, JobPushRecord>() {
     
-    fun create(jobInfo: JobInfo, subscription: Subscription) {
+    fun scanJobListAndCreateNewPushRecords(subscription: Subscription) {
+        jobInfoService.baseMapper.getNoRecordsJobInfoList(subscription.userId!!).forEach {
+            runCatching {
+                checkAndCreate(it, subscription)
+            }
+        }
+    }
+    
+    fun checkAndCreate(jobInfo: JobInfo) {
+        subscriptionService.list().forEachCatching {
+            checkAndCreate(jobInfo, it)
+        }
+    }
+    
+    private fun checkAndCreate(jobInfo: JobInfo, subscription: Subscription) {
         val record = JobPushRecord().apply {
             jobInfoId = jobInfo.id
             subscribeUserId = subscription.userId
             userGpsLocation = subscription.userGpsLocation
-            commuteDuration = jobInfo.getCommutingDuration(subscription)
             pushed = false
+            valid = true
         }
+        jobInfo.run {
+            if(!isEligible(subscription) || !hasKeyword(subscription.searchWord!!)) {
+                record.valid = false
+                save(record)
+                return
+            }
+        }
+        record.commuteDuration = jobInfo.getCommutingDuration(subscription)
         if(!ObjectUtil.hasNull(record.commuteDuration, subscription.maxCommutingDuration)) {
-            if(record.commuteDuration!! > subscription.maxCommutingDuration!!) return
+            if(record.commuteDuration!! > subscription.maxCommutingDuration!!) {
+                record.valid = false
+                save(record)
+                return
+            }
         }
         save(record)
     }

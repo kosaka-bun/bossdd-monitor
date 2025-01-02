@@ -14,6 +14,7 @@ create table subscription
     block_regexes          text comment '岗位信息屏蔽正则表达式（json）',
     user_gps_location      varchar(255) comment '用户住址（经纬度）'
 ) comment '用户订阅配置表';
+create unique index subscription_index_1 on subscription (user_id);
 
 drop table if exists job_info;
 create table job_info
@@ -50,6 +51,7 @@ create table job_push_record
     subscribe_user_id bigint comment '订阅此岗位的用户ID（默认情况下为QQ号）',
     user_gps_location varchar(255) comment '推送记录创建时的用户住址（经纬度）',
     commute_duration  int comment '此岗位通勤时间（分钟）',
-    pushed            tinyint comment '是否已向用户推送此岗位'
+    pushed            tinyint comment '是否已向用户推送此岗位',
+    valid             tinyint comment '该记录是否有效（是否符合用户设定的筛选条件）'
 ) comment '岗位推送记录表';
 create unique index job_push_record_index_1 on job_push_record (job_info_id, subscribe_user_id);

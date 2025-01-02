@@ -1,11 +1,11 @@
 package de.honoka.bossddmonitor.platform
 
-import cn.hutool.core.util.ObjectUtil
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.service.BrowserService
 import de.honoka.bossddmonitor.service.ExceptionReportService
 import de.honoka.bossddmonitor.service.JobInfoService
+import de.honoka.bossddmonitor.service.JobPushRecordService
 import de.honoka.sdk.util.kotlin.text.*
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Component
@@ -15,6 +15,7 @@ import java.util.*
 class BossddPlatform(
     private val browserService: BrowserService,
     private val jobInfoService: JobInfoService,
+    private val jobPushRecordService: JobPushRecordService,
     private val exceptionReportService: ExceptionReportService
 ) : Platform {
     
@@ -75,12 +76,13 @@ class BossddPlatform(
                     }
                     val jobInfo = parseJobInfo(it)
                     runCatching {
-                        isJobInfoValid(jobInfo, subscription)
+                        jobInfo.isEligible(subscription)
                     }.getOrDefault(true).let { b ->
                         if(!b) return@forEachWrapper
                     }
                     jobInfo.parseJobInfoDetails(it)
                     jobInfoService.save(jobInfo)
+                    jobPushRecordService.checkAndCreate(jobInfo)
                 } catch(t: Throwable) {
                     exceptionReportService.report(t)
                 }
@@ -149,16 +151,6 @@ class BossddPlatform(
             hrOnline = it.getBool("bossOnline")
             updateTime = Date()
         }
-    }
-    
-    private fun isJobInfoValid(jobInfo: JobInfo, subscription: Subscription): Boolean {
-        val minSalary = jobInfo.minSalary
-        if(!ObjectUtil.hasNull(minSalary, subscription.minSalary)) {
-            if(minSalary!! < subscription.minSalary!!) {
-                return false
-            }
-        }
-        return !jobInfo.hasBlockWords(subscription)
     }
     
     private fun getScaleParamValue(subscription: Subscription): String {

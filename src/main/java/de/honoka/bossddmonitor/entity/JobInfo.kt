@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.entity
 
+import cn.hutool.core.util.ObjectUtil
 import cn.hutool.http.HttpUtil
 import cn.hutool.json.JSONObject
 import com.baomidou.mybatisplus.annotation.IdType
@@ -115,7 +116,7 @@ data class JobInfo(
     var updateTime: Date? = null
 ) {
     
-    val minSalary: Int?
+    private val minSalary: Int?
         get() = salary?.let {
             val range = it.findOne("\\d+-\\d+") ?: return null
             val min = range.split("-").firstOrNull()?.toInt() ?: return null
@@ -128,7 +129,17 @@ data class JobInfo(
             }
         }
     
-    fun hasBlockWords(subscription: Subscription): Boolean = subscription.run {
+    fun isEligible(subscription: Subscription): Boolean {
+        val minSalary = minSalary
+        if(!ObjectUtil.hasNull(minSalary, subscription.minSalary)) {
+            if(minSalary!! < subscription.minSalary!!) {
+                return false
+            }
+        }
+        return !hasBlockWords(subscription)
+    }
+    
+    private fun hasBlockWords(subscription: Subscription): Boolean = subscription.run {
         val propertiesToCheck = listOf(title, company, companyFullName, tags, details, address)
         blockWords?.toJsonArray()?.forEach {
             propertiesToCheck.firstOrNull { s ->
@@ -145,6 +156,15 @@ data class JobInfo(
             }
         }
         return false
+    }
+    
+    fun hasKeyword(keyword: String): Boolean {
+        val realKeyword = keyword.lowercase()
+        val propertiesToCheck = listOf(title, tags, details)
+        val result = propertiesToCheck.firstOrNull {
+            it?.lowercase()?.contains(realKeyword) == true
+        }
+        return result != null
     }
     
     fun getCommutingDuration(subscription: Subscription): Int? {

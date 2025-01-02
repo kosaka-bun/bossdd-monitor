@@ -28,5 +28,10 @@ data class JobPushRecord(
     /**
      * 是否已向用户推送此岗位
      */
-    var pushed: Boolean? = null
+    var pushed: Boolean? = null,
+    
+    /**
+     * 该记录是否有效（是否符合用户设定的筛选条件）
+     */
+    var valid: Boolean? = null
 )
