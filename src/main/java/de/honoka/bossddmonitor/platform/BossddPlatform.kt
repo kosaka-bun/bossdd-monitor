@@ -76,7 +76,7 @@ class BossddPlatform(
                     }
                     val jobInfo = parseJobInfo(it)
                     runCatching {
-                        jobInfo.isEligible(subscription)
+                        jobInfoService.isEligible(jobInfo, subscription)
                     }.getOrDefault(true).let { b ->
                         if(!b) return@forEachWrapper
                     }

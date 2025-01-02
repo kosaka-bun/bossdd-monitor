@@ -1,19 +1,9 @@
 package de.honoka.bossddmonitor.entity
 
-import cn.hutool.core.util.ObjectUtil
-import cn.hutool.http.HttpUtil
-import cn.hutool.json.JSONObject
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableId
-import de.honoka.bossddmonitor.common.GlobalComponents
 import de.honoka.bossddmonitor.platform.PlatformEnum
-import de.honoka.sdk.util.kotlin.basic.cast
-import de.honoka.sdk.util.kotlin.basic.exception
-import de.honoka.sdk.util.kotlin.net.http.browserApiHeaders
 import de.honoka.sdk.util.kotlin.text.findOne
-import de.honoka.sdk.util.kotlin.text.singleLine
-import de.honoka.sdk.util.kotlin.text.toJsonArray
-import de.honoka.sdk.util.kotlin.text.toJsonWrapper
 import java.util.*
 
 data class JobInfo(
@@ -116,7 +106,7 @@ data class JobInfo(
     var updateTime: Date? = null
 ) {
     
-    private val minSalary: Int?
+    val minSalary: Int?
         get() = salary?.let {
             val range = it.findOne("\\d+-\\d+") ?: return null
             val min = range.split("-").firstOrNull()?.toInt() ?: return null
@@ -128,71 +118,4 @@ data class JobInfo(
                 null
             }
         }
-    
-    fun isEligible(subscription: Subscription): Boolean {
-        val minSalary = minSalary
-        if(!ObjectUtil.hasNull(minSalary, subscription.minSalary)) {
-            if(minSalary!! < subscription.minSalary!!) {
-                return false
-            }
-        }
-        return !hasBlockWords(subscription)
-    }
-    
-    private fun hasBlockWords(subscription: Subscription): Boolean = subscription.run {
-        val propertiesToCheck = listOf(title, company, companyFullName, tags, details, address)
-        blockWords?.toJsonArray()?.forEach {
-            propertiesToCheck.firstOrNull { s ->
-                s?.lowercase()?.contains(it.cast<String>().lowercase()) == true
-            }?.let {
-                return true
-            }
-        }
-        blockRegexes?.toJsonArray()?.forEach {
-            propertiesToCheck.firstOrNull { s ->
-                s?.contains(Regex(it as String, RegexOption.IGNORE_CASE)) == true
-            }?.let {
-                return true
-            }
-        }
-        return false
-    }
-    
-    fun hasKeyword(keyword: String): Boolean {
-        val realKeyword = keyword.lowercase()
-        val propertiesToCheck = listOf(title, tags, details)
-        val result = propertiesToCheck.firstOrNull {
-            it?.lowercase()?.contains(realKeyword) == true
-        }
-        return result != null
-    }
-    
-    fun getCommutingDuration(subscription: Subscription): Int? {
-        subscription.maxCommutingDuration ?: return null
-        when(platform) {
-            PlatformEnum.BOSSDD -> {
-                val url = """
-                    https://amap-proxy.zpurl.cn/_AMapService/v3/direction/transit/integrated?
-                    platform=JS&s=rsv3&logversion=2.0&key=6104503ca2f1d66e900a7e7064c5d880&
-                    sdkversion=2.0.6.1&city=%E5%8C%97%E4%BA%AC%E5%B8%82&strategy=&nightflag=0&
-                    appname=https%253A%252F%252Fwww.zhipin.com%252Fweb%252Fgeek%252Fmap%252Fpath&
-                    origin=${subscription.userGpsLocation}&destination=$gpsLocation&extensions=&
-                    s=rsv3&cityd=NaN
-                """.singleLine()
-                val res = HttpUtil.createGet(url).run {
-                    browserApiHeaders()
-                    GlobalComponents.proxyForwarder.forwarder?.run {
-                        setHttpProxy("localhost", port)
-                    }
-                    execute().body().toJsonWrapper()
-                }
-                if(res.getStr("status") != "1") return null
-                val minDuration = res.getArray("route.transits").minOfOrNull {
-                    it.cast<JSONObject>().getStr("duration").toInt()
-                }
-                return minDuration?.let { it / 60 }
-            }
-            else -> exception("Not support the platform: $platform")
-        }
-    }
 }

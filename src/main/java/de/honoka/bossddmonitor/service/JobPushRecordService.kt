@@ -37,14 +37,17 @@ class JobPushRecordService(
             pushed = false
             valid = true
         }
-        jobInfo.run {
-            if(!isEligible(subscription) || !hasKeyword(subscription.searchWord!!)) {
+        jobInfoService.run {
+            val isInvalid = jobInfo.let {
+                !isEligible(it, subscription) || !hasKeyword(it, subscription.searchWord!!)
+            }
+            if(isInvalid) {
                 record.valid = false
                 save(record)
                 return
             }
+            record.commuteDuration = getCommutingDuration(jobInfo, subscription)
         }
-        record.commuteDuration = jobInfo.getCommutingDuration(subscription)
         if(!ObjectUtil.hasNull(record.commuteDuration, subscription.maxCommutingDuration)) {
             if(record.commuteDuration!! > subscription.maxCommutingDuration!!) {
                 record.valid = false
