@@ -1,7 +1,7 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.common.GlobalComponents
-import de.honoka.bossddmonitor.config.DataServiceProperties
+import de.honoka.bossddmonitor.config.MonitorProperties
 import de.honoka.bossddmonitor.platform.Platform
 import jakarta.annotation.PreDestroy
 import org.springframework.boot.ApplicationArguments
@@ -13,7 +13,7 @@ import kotlin.time.Duration
 
 @Service
 class MonitorService(
-    private val dataServiceProperties: DataServiceProperties,
+    private val monitorProperties: MonitorProperties,
     private val subscriptionService: SubscriptionService,
     private val exceptionReportService: ExceptionReportService,
     private val platforms: List<Platform>
@@ -38,8 +38,8 @@ class MonitorService(
         }
         runningTask = GlobalComponents.scheduledExecutor.scheduleWithFixedDelay(
             action,
-            Duration.parse(dataServiceProperties.monitorTask.initialDelay).inWholeMilliseconds,
-            Duration.parse(dataServiceProperties.monitorTask.delay).inWholeMilliseconds,
+            Duration.parse(monitorProperties.initialDelay).inWholeMilliseconds,
+            Duration.parse(monitorProperties.delay).inWholeMilliseconds,
             TimeUnit.MILLISECONDS
         )
     }

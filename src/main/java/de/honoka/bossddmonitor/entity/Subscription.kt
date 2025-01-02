@@ -34,14 +34,19 @@ data class Subscription(
     var minCompanyScale: Int? = null,
     
     /**
-     * 岗位的最大年限要求
+     * 岗位的最大经验要求（年）
      */
-    var maxSeniorityYears: Int? = null,
+    var maxExperience: Int? = null,
     
     /**
-     * 岗位最低薪资待遇（单位：千）
+     * 岗位的最低薪资待遇（千）
      */
     var minSalary: Int? = null,
+    
+    /**
+     * 岗位的最大通勤时间
+     */
+    var maxCommutingDuration: Int? = null,
     
     /**
      * 岗位信息屏蔽关键词（json）

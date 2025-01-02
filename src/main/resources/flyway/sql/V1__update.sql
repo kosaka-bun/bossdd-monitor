@@ -1,17 +1,18 @@
 drop table if exists subscription;
 create table subscription
 (
-    id                  bigint auto_increment primary key,
-    user_id             bigint comment '用户ID（默认情况下为QQ号）',
-    receiver_group_id   bigint comment '接收推送消息的群号（若为空则使用私聊进行推送）',
-    search_word         varchar(255) comment '搜索关键词',
-    city_code           varchar(255) comment '城市代码',
-    min_company_scale   int comment '岗位的最小公司规模',
-    max_seniority_years int comment '岗位的最大年限要求',
-    min_salary          int comment '岗位最低薪资待遇（单位：千）',
-    block_words         text comment '岗位信息屏蔽关键词（json）',
-    block_regexes       text comment '岗位信息屏蔽正则表达式（json）',
-    user_gps_location   varchar(255) comment '用户住址（经纬度）'
+    id                     bigint auto_increment primary key,
+    user_id                bigint comment '用户ID（默认情况下为QQ号）',
+    receiver_group_id      bigint comment '接收推送消息的群号（若为空则使用私聊进行推送）',
+    search_word            varchar(255) comment '搜索关键词',
+    city_code              varchar(255) comment '城市代码',
+    min_company_scale      int comment '岗位的最小公司规模',
+    max_experience         int comment '岗位的最大经验要求（年）',
+    min_salary             int comment '岗位的最低薪资待遇（千）',
+    max_commuting_duration int comment '岗位的最大通勤时间',
+    block_words            text comment '岗位信息屏蔽关键词（json）',
+    block_regexes          text comment '岗位信息屏蔽正则表达式（json）',
+    user_gps_location      varchar(255) comment '用户住址（经纬度）'
 ) comment '用户订阅配置表';
 
 drop table if exists job_info;
@@ -47,7 +48,8 @@ create table job_push_record
     id                bigint auto_increment primary key,
     job_info_id       bigint,
     subscribe_user_id bigint comment '订阅此岗位的用户ID（默认情况下为QQ号）',
-    user_gps_location varchar(255) comment '用户住址（经纬度）',
+    user_gps_location varchar(255) comment '推送记录创建时的用户住址（经纬度）',
     commute_duration  int comment '此岗位通勤时间（分钟）',
     pushed            tinyint comment '是否已向用户推送此岗位'
 ) comment '岗位推送记录表';
+create unique index job_push_record_index_1 on job_push_record (job_info_id, subscribe_user_id);

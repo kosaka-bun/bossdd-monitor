@@ -18,15 +18,14 @@ honoka:
         http-port: 3101
 
 app:
+  proxy: localhost:10808
   browser:
     user-data-dir:
       path: ./build/selenium/user-data
-    proxy: localhost:10808
     default-headless: false
-  data-service:
-    monitor-task:
-      initial-delay: 0s
-      delay: 1m
+  monitor:
+    initial-delay: 0s
+    delay: 1m
 
 logging:
   level:

@@ -6,6 +6,4 @@ import de.honoka.bossddmonitor.mapper.SubscriptionMapper
 import org.springframework.stereotype.Service
 
 @Service
-class SubscriptionService : ServiceImpl<SubscriptionMapper, Subscription>() {
-
-}
+class SubscriptionService : ServiceImpl<SubscriptionMapper, Subscription>()

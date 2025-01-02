@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.service
 
+import de.honoka.bossddmonitor.common.ProxyForwarder
 import de.honoka.bossddmonitor.config.BrowserProperties
 import de.honoka.sdk.util.concurrent.ThreadPoolUtils
 import de.honoka.sdk.util.kotlin.basic.exception
@@ -8,7 +9,6 @@ import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.basic.tryBlock
 import de.honoka.sdk.util.kotlin.concurrent.getOrCancel
 import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
-import de.honoka.sdk.util.kotlin.net.socket.SocketForwarder
 import de.honoka.sdk.util.kotlin.text.singleLine
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
@@ -30,7 +30,10 @@ import java.util.logging.Level
 import java.util.logging.Logger
 
 @Service
-class BrowserService(private val browserProperties: BrowserProperties) {
+class BrowserService(
+    private val browserProperties: BrowserProperties,
+    private val proxyForwarder: ProxyForwarder
+) {
     
     companion object {
         
@@ -44,8 +47,6 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     
     val browser: ChromeDriver
         get() = browserOrNull!!
-    
-    private val proxy = browserProperties.proxy?.let { SocketForwarder(setOf(it)) }
     
     private val waiterExecutor = Executors.newFixedThreadPool(1)
     
@@ -88,7 +89,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
             log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
             addArguments("--user-data-dir=$userDataDir")
             if(headless) addArguments("--headless")
-            proxy?.run {
+            proxyForwarder.forwarder?.run {
                 addArguments("--proxy-server=localhost:$port")
             }
             addArguments("--user-agent=$userAgent")
@@ -141,7 +142,7 @@ class BrowserService(private val browserProperties: BrowserProperties) {
     }
     
     private fun loadPage(url: String, waitMillisAfterLoad: Long = 0) {
-        proxy?.closeAllConnections()
+        proxyForwarder.forwarder?.closeAllConnections()
         loadBlankPage()
         browser.get(url)
         Thread.sleep(waitMillisAfterLoad)

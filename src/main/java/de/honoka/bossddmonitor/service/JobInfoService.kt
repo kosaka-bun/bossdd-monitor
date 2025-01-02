@@ -6,6 +6,4 @@ import de.honoka.bossddmonitor.mapper.JobInfoMapper
 import org.springframework.stereotype.Service
 
 @Service
-class JobInfoService : ServiceImpl<JobInfoMapper, JobInfo>() {
-
-}
+class JobInfoService : ServiceImpl<JobInfoMapper, JobInfo>()

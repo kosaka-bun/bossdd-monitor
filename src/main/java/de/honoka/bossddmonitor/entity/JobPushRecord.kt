@@ -16,7 +16,7 @@ data class JobPushRecord(
     var subscribeUserId: Long? = null,
     
     /**
-     * 用户住址（经纬度）
+     * 推送记录创建时的用户住址（经纬度）
      */
     var userGpsLocation: String? = null,
     

@@ -4,6 +4,7 @@ import cn.hutool.core.util.ObjectUtil
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.service.BrowserService
+import de.honoka.bossddmonitor.service.ExceptionReportService
 import de.honoka.bossddmonitor.service.JobInfoService
 import de.honoka.sdk.util.kotlin.text.*
 import org.jsoup.Jsoup
@@ -13,7 +14,8 @@ import java.util.*
 @Component
 class BossddPlatform(
     private val browserService: BrowserService,
-    private val jobInfoService: JobInfoService
+    private val jobInfoService: JobInfoService,
+    private val exceptionReportService: ExceptionReportService
 ) : Platform {
     
     companion object {
@@ -27,7 +29,7 @@ class BossddPlatform(
             10000 to "306"
         )
         
-        private val seniorityYearsToParamMap = mapOf(
+        private val experienceToParamMap = mapOf(
             0 to "101,103",
             1 to "104",
             3 to "105",
@@ -49,22 +51,23 @@ class BossddPlatform(
         val urlPrefix = """
             https://www.zhipin.com/web/geek/job?query=${subscription.searchWord}&
             city=${subscription.cityCode}&scale=${getScaleParamValue(subscription)}&
-            experience=${getSeniorityYearsParamValue(subscription)}&jobType=1901&
+            experience=${getExperienceParamValue(subscription)}&jobType=1901&
             salary=${getSalaryParamValue(subscription)}
         """.singleLine()
         fun url(page: Int) = "$urlPrefix&page=$page"
         val apiUrl = "https://www.zhipin.com/wapi/zpgeek/search/joblist.json"
-        repeat(10) {
+        repeat(10) { i ->
             browserService.ensureIsActive()
-            val res = browserService.waitForResponse(url(it + 1), apiUrl) { r ->
-                r.toJsonWrapper().getInt("code") == 0
+            val res = browserService.waitForResponse(url(i + 1), apiUrl) {
+                it.toJsonWrapper().getInt("code") == 0
             }
             res.toJsonWrapper().getArray("zpData.jobList").forEachWrapper {
                 if(Thread.currentThread().isInterrupted) return
-                runCatching {
-                    val platform = PlatformEnum.BOSSDD
+                try {
                     val platformJobId = it.getStr("encryptJobId")
-                    jobInfoService.baseMapper.findIdByPlatformJobId(platform, platformJobId)?.run {
+                    jobInfoService.baseMapper.findIdByPlatformJobId(
+                        PlatformEnum.BOSSDD, platformJobId
+                    )?.run {
                         val incrementJobInfo = parseIncrementJobInfo(it)
                         incrementJobInfo.id = this
                         jobInfoService.updateById(incrementJobInfo)
@@ -72,12 +75,14 @@ class BossddPlatform(
                     }
                     val jobInfo = parseJobInfo(it)
                     runCatching {
-                        if(!isJobInfoValid(jobInfo, subscription)) {
-                            return@forEachWrapper
-                        }
+                        isJobInfoValid(jobInfo, subscription)
+                    }.getOrDefault(true).let { b ->
+                        if(!b) return@forEachWrapper
                     }
-                    parseJobInfoDetails(jobInfo, it)
+                    jobInfo.parseJobInfoDetails(it)
                     jobInfoService.save(jobInfo)
+                } catch(t: Throwable) {
+                    exceptionReportService.report(t)
                 }
             }
         }
@@ -108,7 +113,7 @@ class BossddPlatform(
         }
     }
     
-    private fun parseJobInfoDetails(jobInfo: JobInfo, jsonWrapper: JsonWrapper) = jobInfo.run {
+    private fun JobInfo.parseJobInfoDetails(jsonWrapper: JsonWrapper) {
         val identifiersMap = identifiers!!.toJsonObject()
         val urlPrefix = "https://www.zhipin.com/job_detail/$platformJobId.html"
         val url = "$urlPrefix?lid=${identifiersMap["lid"]}&securityId=${identifiersMap["securityId"]}"
@@ -162,9 +167,9 @@ class BossddPlatform(
         return params.joinToString(",")
     }
     
-    private fun getSeniorityYearsParamValue(subscription: Subscription): String {
-        val maxYears = subscription.maxSeniorityYears!!
-        val params = seniorityYearsToParamMap.filter { (k) -> k <= maxYears }.values
+    private fun getExperienceParamValue(subscription: Subscription): String {
+        val maxYears = subscription.maxExperience!!
+        val params = experienceToParamMap.filter { (k) -> k <= maxYears }.values
         return params.joinToString(",")
     }
     

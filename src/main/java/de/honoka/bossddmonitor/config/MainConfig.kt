@@ -11,7 +11,11 @@ import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Configuration
 import java.nio.file.Paths
 
-@EnableConfigurationProperties(value = [BrowserProperties::class, DataServiceProperties::class])
+@EnableConfigurationProperties(value = [
+    MainProperties::class,
+    BrowserProperties::class,
+    MonitorProperties::class
+])
 @Configuration
 class MainConfig {
     
@@ -27,12 +31,16 @@ class MainConfig {
     }
 }
 
+@ConfigurationProperties("app")
+data class MainProperties(
+    
+    var proxy: String? = null
+)
+
 @ConfigurationProperties("app.browser")
-class BrowserProperties(
+data class BrowserProperties(
     
     var userDataDir: UserDataDir = UserDataDir(),
-    
-    var proxy: String? = null,
     
     var defaultHeadless: Boolean = true,
     
@@ -67,22 +75,16 @@ class BrowserProperties(
     )
 }
 
-@ConfigurationProperties("app.data-service")
-class DataServiceProperties(
+@ConfigurationProperties("app.monitor")
+data class MonitorProperties(
     
-    var monitorTask: MonitorTask = MonitorTask()
-) {
+    /**
+     * 任务启动后，在第一次执行监控任务前需等待的时间长度
+     */
+    var initialDelay: String = "1m",
     
-    data class MonitorTask(
-        
-        /**
-         * 任务启动后，在第一次执行监控任务前需等待的时间长度
-         */
-        var initialDelay: String = "1m",
-        
-        /**
-         * 任务在每次执行完成之后到下一次执行前需等待的时间长度
-         */
-        var delay: String = "5m"
-    )
-}
+    /**
+     * 任务在每次执行完成之后到下一次执行前需等待的时间长度
+     */
+    var delay: String = "5m"
+)
