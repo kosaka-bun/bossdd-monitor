@@ -10,8 +10,6 @@ import de.honoka.sdk.util.kotlin.basic.tryBlock
 import de.honoka.sdk.util.kotlin.concurrent.getOrCancel
 import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
 import de.honoka.sdk.util.kotlin.text.singleLine
-import jakarta.annotation.PostConstruct
-import jakarta.annotation.PreDestroy
 import org.intellij.lang.annotations.Language
 import org.openqa.selenium.Dimension
 import org.openqa.selenium.Point
@@ -60,16 +58,15 @@ class BrowserService(
     @Volatile
     private var hasBeenShutdown = false
     
-    @PostConstruct
-    private fun init() {
+    fun init() {
+        hasBeenShutdown = false
         disableSeleniumLog()
         if(browserProperties.userDataDir.clearOnStartup) {
             clearUserDataDir()
         }
     }
     
-    @PreDestroy
-    private fun stop() {
+    fun stop() {
         hasBeenShutdown = true
         responseHandlerExecutor.shutdownNowAndWait()
         waiterExecutor.shutdownNowAndWait()

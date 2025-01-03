@@ -25,15 +25,16 @@ class JobInfoService(
     
     fun isEligible(jobInfo: JobInfo, subscription: Subscription): Boolean {
         if(jobInfo.cityCode != subscription.cityCode) return false
+        if(!isHrLivenessValid(jobInfo)) return false
         val minCompanyScale = jobInfo.minCompanyScale
         if(!ObjectUtil.hasNull(minCompanyScale, subscription.minCompanyScale)) {
             if(minCompanyScale!! < subscription.minCompanyScale!!) {
                 return false
             }
         }
-        val minSalary = jobInfo.minSalary
-        if(!ObjectUtil.hasNull(minSalary, subscription.minSalary)) {
-            if(minSalary!! < subscription.minSalary!!) {
+        val averageSalary = jobInfo.averageSalary
+        if(!ObjectUtil.hasNull(averageSalary, subscription.minSalary)) {
+            if(averageSalary!! < subscription.minSalary!!) {
                 return false
             }
         }
@@ -76,6 +77,17 @@ class JobInfoService(
             it?.lowercase()?.contains(realKeyword) == true
         }
         return result != null
+    }
+    
+    fun isHrLivenessValid(jobInfo: JobInfo): Boolean {
+        val validLivenessList = when(jobInfo.platform) {
+            PlatformEnum.BOSSDD -> listOf("在线", "刚刚活跃", "今日活跃", "昨日活跃")
+            else -> exception("Not support the platform: ${jobInfo.platform}")
+        }
+        jobInfo.hrLiveness?.let {
+            return it in validLivenessList
+        }
+        return true
     }
     
     fun getCommutingDuration(jobInfo: JobInfo, subscription: Subscription): Int? = run {

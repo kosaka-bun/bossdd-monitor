@@ -4,7 +4,6 @@ import de.honoka.bossddmonitor.common.GlobalComponents
 import de.honoka.bossddmonitor.config.MonitorProperties
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.platform.Platform
-import jakarta.annotation.PreDestroy
 import org.springframework.stereotype.Service
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -40,7 +39,6 @@ class MonitorService(
         )
     }
     
-    @PreDestroy
     @Synchronized
     fun stop() {
         runningTask?.run {

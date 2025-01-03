@@ -1,7 +1,6 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.common.GlobalComponents
-import jakarta.annotation.PreDestroy
 import org.springframework.stereotype.Service
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -25,7 +24,6 @@ class PushService {
         )
     }
     
-    @PreDestroy
     @Synchronized
     fun stop() {
         runningTask?.run {

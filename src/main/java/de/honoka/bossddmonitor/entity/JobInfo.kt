@@ -108,32 +108,28 @@ data class JobInfo(
     
     val minCompanyScale: Int?
         get() = companyScale?.let {
-            if(it.contains("-")) {
-                it.substring(it.indexOf("-")).toInt()
-            } else {
-                it.findOne("\\d+")?.toInt()
+            when {
+                it.contains("-") -> it.substring(0, it.indexOf("-")).toInt()
+                else -> it.findOne("\\d+")?.toInt()
             }
         }
     
-    val minSalary: Int?
+    val averageSalary: Int?
         get() = salary?.let {
             val range = it.findOne("\\d+-\\d+") ?: return null
-            val min = range.split("-").firstOrNull()?.toInt() ?: return null
-            if(it.contains("K")) {
-                min
-            } else if(it.contains("元")) {
-                min / 1000
-            } else {
-                null
+            val parts = range.split("-").map { s -> s.toInt() }
+            when {
+                it.contains("K") -> (parts[0] + parts[1]) / 2
+                it.contains("元") -> (parts[0] + parts[1]) / 2000
+                else -> null
             }
         }
     
     val minExperience: Int?
         get() = experience?.let {
-            if(it.contains("-")) {
-                it.substring(it.indexOf("-")).toInt()
-            } else {
-                it.findOne("\\d+")?.toInt() ?: 0
+            when {
+                it.contains("-") -> it.substring(0, it.indexOf("-")).toInt()
+                else -> it.findOne("\\d+")?.toInt() ?: 0
             }
         }
 }
