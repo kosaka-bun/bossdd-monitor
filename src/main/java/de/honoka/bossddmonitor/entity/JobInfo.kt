@@ -106,6 +106,15 @@ data class JobInfo(
     var updateTime: Date? = null
 ) {
     
+    val minCompanyScale: Int?
+        get() = companyScale?.let {
+            if(it.contains("-")) {
+                it.substring(it.indexOf("-")).toInt()
+            } else {
+                it.findOne("\\d+")?.toInt()
+            }
+        }
+    
     val minSalary: Int?
         get() = salary?.let {
             val range = it.findOne("\\d+-\\d+") ?: return null
@@ -116,6 +125,15 @@ data class JobInfo(
                 min / 1000
             } else {
                 null
+            }
+        }
+    
+    val minExperience: Int?
+        get() = experience?.let {
+            if(it.contains("-")) {
+                it.substring(it.indexOf("-")).toInt()
+            } else {
+                it.findOne("\\d+")?.toInt() ?: 0
             }
         }
 }

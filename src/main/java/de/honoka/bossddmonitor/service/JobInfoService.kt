@@ -24,9 +24,22 @@ class JobInfoService(
 ) : ServiceImpl<JobInfoMapper, JobInfo>() {
     
     fun isEligible(jobInfo: JobInfo, subscription: Subscription): Boolean {
+        if(jobInfo.cityCode != subscription.cityCode) return false
+        val minCompanyScale = jobInfo.minCompanyScale
+        if(!ObjectUtil.hasNull(minCompanyScale, subscription.minCompanyScale)) {
+            if(minCompanyScale!! < subscription.minCompanyScale!!) {
+                return false
+            }
+        }
         val minSalary = jobInfo.minSalary
         if(!ObjectUtil.hasNull(minSalary, subscription.minSalary)) {
             if(minSalary!! < subscription.minSalary!!) {
+                return false
+            }
+        }
+        val minExperience = jobInfo.minExperience
+        if(!ObjectUtil.hasNull(minExperience, subscription.maxExperience)) {
+            if(minExperience!! > subscription.maxExperience!!) {
                 return false
             }
         }

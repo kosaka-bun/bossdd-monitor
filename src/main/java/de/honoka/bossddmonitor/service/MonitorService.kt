@@ -5,8 +5,6 @@ import de.honoka.bossddmonitor.config.MonitorProperties
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.platform.Platform
 import jakarta.annotation.PreDestroy
-import org.springframework.boot.ApplicationArguments
-import org.springframework.boot.ApplicationRunner
 import org.springframework.stereotype.Service
 import java.util.concurrent.ScheduledFuture
 import java.util.concurrent.TimeUnit
@@ -19,14 +17,10 @@ class MonitorService(
     private val jobPushRecordService: JobPushRecordService,
     private val exceptionReportService: ExceptionReportService,
     private val platforms: List<Platform>
-) : ApplicationRunner {
+) {
     
     @Volatile
     private var runningTask: ScheduledFuture<*>? = null
-    
-    override fun run(args: ApplicationArguments) {
-        startup()
-    }
     
     @Synchronized
     fun startup() {
