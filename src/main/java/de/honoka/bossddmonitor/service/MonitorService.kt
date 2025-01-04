@@ -49,12 +49,13 @@ class MonitorService(
     
     private fun doTask() {
         subscriptionService.list().forEach {
-            runCatching {
-                platforms.forEach { p ->
+            platforms.forEach { p ->
+                runCatching {
                     doDataExtracting(it, p)
+                    jobPushRecordService.scanAndCreateMissingRecords(it)
+                }.getOrElse {
+                    exceptionReportService.report(it)
                 }
-            }.getOrElse {
-                exceptionReportService.report(it)
             }
         }
     }
@@ -62,7 +63,6 @@ class MonitorService(
     private fun doDataExtracting(subscription: Subscription, platform: Platform) {
         runCatching {
             platform.doDataExtracting(subscription)
-            jobPushRecordService.scanJobListAndCreateNewPushRecords(subscription)
         }.getOrElse {
             exceptionReportService.report(it)
         }

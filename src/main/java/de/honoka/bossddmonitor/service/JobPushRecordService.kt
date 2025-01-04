@@ -15,11 +15,9 @@ class JobPushRecordService(
     private val jobInfoService: JobInfoService
 ) : ServiceImpl<JobPushRecordMapper, JobPushRecord>() {
     
-    fun scanJobListAndCreateNewPushRecords(subscription: Subscription) {
-        jobInfoService.baseMapper.getNoRecordsJobInfoList(subscription.userId!!).forEach {
-            runCatching {
-                checkAndCreate(it, subscription)
-            }
+    fun scanAndCreateMissingRecords(subscription: Subscription) {
+        jobInfoService.baseMapper.getNoRecordsJobInfoList(subscription.userId!!).forEachCatching {
+            checkAndCreate(it, subscription)
         }
     }
     
