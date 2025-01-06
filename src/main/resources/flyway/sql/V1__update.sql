@@ -23,6 +23,7 @@ create table job_info
     id                bigint auto_increment primary key,
     platform          varchar(255) comment '平台名称',
     platform_job_id   varchar(255) comment '平台岗位ID',
+    from_search_word  varchar(255) comment '来源的搜索关键词',
     identifiers       text comment '岗位标识符（json）',
     city_code         varchar(255) comment '城市代码',
     title             varchar(255) comment '岗位标题',

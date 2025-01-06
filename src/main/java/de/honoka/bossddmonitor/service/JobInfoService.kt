@@ -70,15 +70,11 @@ class JobInfoService(
         return false
     }
     
-    fun hasKeyword(jobInfo: JobInfo, keyword: String): Boolean {
-        val realKeyword = keyword.lowercase()
-        val propertiesToCheck = jobInfo.run {
-            listOf(title, tags, details)
-        }
-        val result = propertiesToCheck.firstOrNull {
-            it?.lowercase()?.contains(realKeyword) == true
-        }
-        return result != null
+    fun isRelatedSearchWord(jobInfo: JobInfo, searchWord: String?): Boolean {
+        if(ObjectUtil.hasNull(jobInfo.fromSearchWord, searchWord)) return false
+        val fromSearchWord = jobInfo.fromSearchWord!!.lowercase()
+        val lowerSearchWord = searchWord!!.lowercase()
+        return fromSearchWord.contains(lowerSearchWord) || lowerSearchWord.contains(fromSearchWord)
     }
     
     fun isHrLivenessValid(jobInfo: JobInfo): Boolean {

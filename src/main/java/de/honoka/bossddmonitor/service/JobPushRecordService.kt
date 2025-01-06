@@ -41,7 +41,7 @@ class JobPushRecordService(
         }
         jobInfoService.run {
             val isInvalid = jobInfo.let {
-                !isEligible(it, subscription) || !hasKeyword(it, subscription.searchWord!!)
+                !isEligible(it, subscription) || !isRelatedSearchWord(it, subscription.searchWord)
             }
             if(isInvalid) {
                 record.valid = false

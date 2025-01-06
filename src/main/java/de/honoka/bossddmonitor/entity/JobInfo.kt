@@ -22,6 +22,11 @@ data class JobInfo(
     var platformJobId: String? = null,
     
     /**
+     * 来源的搜索关键词
+     */
+    var fromSearchWord: String? = null,
+    
+    /**
      * 岗位标识符（json）
      */
     var identifiers: String? = null,
