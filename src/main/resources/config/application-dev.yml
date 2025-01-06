@@ -24,8 +24,10 @@ app:
       path: ./build/selenium/user-data
     default-headless: false
   monitor:
-    initial-delay: 0s
     delay: 1m
+    initial-delay: 0s
+    weekday-range: 1-7
+    hour-range: 0-24
 
 logging:
   level:

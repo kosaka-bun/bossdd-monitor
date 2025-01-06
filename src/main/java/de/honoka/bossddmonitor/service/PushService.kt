@@ -8,7 +8,7 @@ import de.honoka.bossddmonitor.platform.PlatformEnum
 import de.honoka.qqrobot.framework.api.RobotFramework
 import de.honoka.qqrobot.framework.api.model.RobotMessageType
 import de.honoka.qqrobot.framework.api.model.RobotMultipartMessage
-import de.honoka.sdk.util.kotlin.basic.forEachCatching
+import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.concurrent.ScheduledTask
 import de.honoka.sdk.util.kotlin.text.singleLine
 import de.honoka.sdk.util.kotlin.text.toJsonObject
@@ -25,14 +25,16 @@ class PushService(
     private val robotFramework: RobotFramework
 ) {
     
-    val scheduledTask = ScheduledTask("1m", "1m") {
-        doTask()
-    }
+    val scheduledTask = ScheduledTask("1m", "1m", action = ::doTask)
     
     private fun doTask() {
-        subscriptionService.list().forEachCatching {
+        subscriptionService.list().forEach {
             if(ServiceLauncher.appShutdown) return
-            pushJobInfo(it)
+            runCatching {
+                pushJobInfo(it)
+            }.getOrElse {
+                log.error("", it)
+            }
         }
     }
     

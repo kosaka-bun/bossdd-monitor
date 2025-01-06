@@ -11,6 +11,7 @@ import de.honoka.sdk.util.kotlin.text.*
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Component
 import java.util.*
+import java.util.concurrent.RejectedExecutionException
 
 @Component
 class BossddPlatform(
@@ -85,6 +86,7 @@ class BossddPlatform(
                     jobInfoService.save(jobInfo)
                     jobPushRecordService.checkAndCreate(jobInfo)
                 } catch(t: Throwable) {
+                    if(t is RejectedExecutionException) return@forEachWrapper
                     exceptionReporter.report(t)
                 }
             }
