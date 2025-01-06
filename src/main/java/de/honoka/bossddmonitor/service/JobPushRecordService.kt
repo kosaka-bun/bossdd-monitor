@@ -17,14 +17,16 @@ class JobPushRecordService(
 ) : ServiceImpl<JobPushRecordMapper, JobPushRecord>() {
     
     fun scanAndCreateMissingRecords(subscription: Subscription) {
-        if(ServiceLauncher.appShutdown) return
+        if(ServiceLauncher.appShutdown || !subscription.enabled!!) return
         jobInfoService.baseMapper.getNoRecordsJobInfoList(subscription.userId!!).forEachCatching {
+            if(ServiceLauncher.appShutdown) return
             checkAndCreate(it, subscription)
         }
     }
     
     fun checkAndCreate(jobInfo: JobInfo) {
         subscriptionService.list().forEachCatching {
+            if(!it.enabled!!) return@forEachCatching
             checkAndCreate(jobInfo, it)
         }
     }

@@ -12,7 +12,8 @@ create table subscription
     max_commuting_duration int comment '岗位的最大通勤时间',
     block_words            text comment '岗位信息屏蔽关键词（json）',
     block_regexes          text comment '岗位信息屏蔽正则表达式（json）',
-    user_gps_location      varchar(255) comment '用户住址（经纬度）'
+    user_gps_location      varchar(255) comment '用户住址（经纬度）',
+    enabled                tinyint comment '是否启用此订阅'
 ) comment '用户订阅配置表';
 create unique index subscription_index_1 on subscription (user_id);
 

@@ -33,6 +33,7 @@ class MonitorService(
     private fun doTask() {
         if(!isCurrentTimeInRange()) return
         subscriptionService.list().forEach {
+            if(!it.enabled!!) return@forEach
             platforms.forEach { p ->
                 if(ServiceLauncher.appShutdown) return
                 runCatching {

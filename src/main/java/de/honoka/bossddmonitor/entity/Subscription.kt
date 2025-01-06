@@ -61,5 +61,10 @@ data class Subscription(
     /**
      * 用户住址（经纬度）
      */
-    var userGpsLocation: String? = null
+    var userGpsLocation: String? = null,
+    
+    /**
+     * 是否启用此订阅
+     */
+    var enabled: Boolean? = null
 )

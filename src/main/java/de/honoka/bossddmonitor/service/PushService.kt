@@ -30,6 +30,7 @@ class PushService(
     private fun doTask() {
         subscriptionService.list().forEach {
             if(ServiceLauncher.appShutdown) return
+            if(!it.enabled!!) return@forEach
             runCatching {
                 pushJobInfo(it)
             }.getOrElse {
@@ -46,10 +47,14 @@ class PushService(
             add(RobotMessageType.IMAGE, getImageToPush(jobInfo, record))
             add(RobotMessageType.TEXT, getUrlToPush(jobInfo))
         }
-        if(subscription.receiverGroupId != null) {
-            robotFramework.sendGroupMsg(subscription.receiverGroupId!!, message)
-        } else {
-            robotFramework.sendPrivateMsg(subscription.userId!!, message)
+        robotFramework.run {
+            subscription.run {
+                if(receiverGroupId != null) {
+                    sendGroupMsg(receiverGroupId!!, message)
+                } else {
+                    sendPrivateMsg(userId!!, message)
+                }
+            }
         }
         jobPushRecordService.updateById(JobPushRecord().apply {
             id = record.id
@@ -68,6 +73,7 @@ class PushService(
                 经验要求：$experience
                 岗位地址：$address
                 通勤时间：${jobPushRecord.commuteDuration}分钟
+                信息更新时间：$updateTime
                 
                 $details
             """
