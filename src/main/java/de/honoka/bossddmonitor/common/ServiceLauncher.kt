@@ -14,15 +14,23 @@ class ServiceLauncher(
     private val browserService: BrowserService
 ) : ApplicationRunner {
     
+    companion object {
+        
+        @Volatile
+        var appShutdown = false
+            private set
+    }
+    
     override fun run(args: ApplicationArguments) {
         browserService.init()
-        monitorService.startup()
-        pushService.startup()
+        monitorService.scheduledTask.startup()
+        pushService.scheduledTask.startup()
     }
     
     fun stop() {
+        appShutdown = true
         browserService.stop()
-        monitorService.stop()
-        pushService.stop()
+        monitorService.scheduledTask.close()
+        pushService.scheduledTask.close()
     }
 }

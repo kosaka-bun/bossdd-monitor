@@ -1,6 +1,7 @@
 package de.honoka.bossddmonitor.service
 
 import de.honoka.bossddmonitor.common.ProxyForwarder
+import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.config.BrowserProperties
 import de.honoka.sdk.util.concurrent.ThreadPoolUtils
 import de.honoka.sdk.util.kotlin.basic.exception
@@ -105,7 +106,7 @@ class BrowserService(
             send(Network.setBlockedURLs(blockUrls))
             addListener(Network.responseReceived()) { e ->
                 responseHandlerExecutor.submit {
-                    if(Thread.currentThread().isInterrupted) return@submit
+                    if(ServiceLauncher.appShutdown) return@submit
                     runCatching {
                         handleResponse(this, e)
                     }
@@ -229,7 +230,7 @@ class BrowserService(
             if(!url.startsWith(k)) return@forEach
             val response = run {
                 repeat(50) {
-                    if(Thread.currentThread().isInterrupted) return
+                    if(ServiceLauncher.appShutdown) return
                     try {
                         return@run devTools.send(Network.getResponseBody(event.requestId)).body
                     } catch(t: Throwable) {

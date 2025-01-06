@@ -1,60 +1,42 @@
 package de.honoka.bossddmonitor.service
 
-import de.honoka.bossddmonitor.common.GlobalComponents
+import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.config.MonitorProperties
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.platform.Platform
+import de.honoka.qqrobot.starter.component.ExceptionReporter
+import de.honoka.sdk.util.kotlin.concurrent.ScheduledTask
 import org.springframework.stereotype.Service
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
-import kotlin.time.Duration
+import java.util.concurrent.RejectedExecutionException
 
 @Service
 class MonitorService(
     private val monitorProperties: MonitorProperties,
     private val subscriptionService: SubscriptionService,
     private val jobPushRecordService: JobPushRecordService,
-    private val exceptionReportService: ExceptionReportService,
+    private val exceptionReporter: ExceptionReporter,
     private val platforms: List<Platform>
 ) {
     
-    @Volatile
-    private var runningTask: ScheduledFuture<*>? = null
-    
-    @Synchronized
-    fun startup() {
-        stop()
-        val action = {
-            runCatching {
-                doTask()
-            }.getOrElse {
-                exceptionReportService.report(it)
+    val scheduledTask = run {
+        ScheduledTask(monitorProperties.delay, monitorProperties.initialDelay) {
+            doTask()
+        }.apply {
+            exceptionCallback = {
+                exceptionReporter.report(it)
             }
-        }
-        runningTask = GlobalComponents.scheduledExecutor.scheduleWithFixedDelay(
-            action,
-            Duration.parse(monitorProperties.initialDelay).inWholeMilliseconds,
-            Duration.parse(monitorProperties.delay).inWholeMilliseconds,
-            TimeUnit.MILLISECONDS
-        )
-    }
-    
-    @Synchronized
-    fun stop() {
-        runningTask?.run {
-            cancel(true)
-            runningTask = null
         }
     }
     
     private fun doTask() {
         subscriptionService.list().forEach {
             platforms.forEach { p ->
+                if(ServiceLauncher.appShutdown) return
                 runCatching {
                     doDataExtracting(it, p)
                     jobPushRecordService.scanAndCreateMissingRecords(it)
                 }.getOrElse {
-                    exceptionReportService.report(it)
+                    exceptionReporter.report(it)
                 }
             }
         }
@@ -64,7 +46,8 @@ class MonitorService(
         runCatching {
             platform.doDataExtracting(subscription)
         }.getOrElse {
-            exceptionReportService.report(it)
+            if(it is RejectedExecutionException) return
+            exceptionReporter.report(it)
         }
     }
 }

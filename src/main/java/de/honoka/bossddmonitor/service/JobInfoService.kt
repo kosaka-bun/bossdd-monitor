@@ -9,8 +9,10 @@ import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.JobInfoMapper
 import de.honoka.bossddmonitor.platform.PlatformEnum
+import de.honoka.qqrobot.starter.component.ExceptionReporter
 import de.honoka.sdk.util.kotlin.basic.cast
 import de.honoka.sdk.util.kotlin.basic.exception
+import de.honoka.sdk.util.kotlin.basic.tryBlockNullable
 import de.honoka.sdk.util.kotlin.net.http.browserApiHeaders
 import de.honoka.sdk.util.kotlin.text.singleLine
 import de.honoka.sdk.util.kotlin.text.toJsonArray
@@ -20,7 +22,7 @@ import org.springframework.stereotype.Service
 @Service
 class JobInfoService(
     private val proxyForwarder: ProxyForwarder,
-    private val exceptionReportService: ExceptionReportService
+    private val exceptionReporter: ExceptionReporter
 ) : ServiceImpl<JobInfoMapper, JobInfo>() {
     
     fun isEligible(jobInfo: JobInfo, subscription: Subscription): Boolean {
@@ -92,9 +94,11 @@ class JobInfoService(
     
     fun getCommutingDuration(jobInfo: JobInfo, subscription: Subscription): Int? = run {
         runCatching {
-            doGetCommutingDuration(jobInfo, subscription)
+            tryBlockNullable(3) {
+                doGetCommutingDuration(jobInfo, subscription)
+            }
         }.getOrElse {
-            exceptionReportService.report(it)
+            exceptionReporter.report(it)
             throw it
         }
     }
@@ -114,11 +118,14 @@ class JobInfoService(
                 val res = HttpUtil.createGet(url).run {
                     browserApiHeaders()
                     proxyForwarder.forwarder?.run {
+                        closeAllConnections()
                         setHttpProxy("localhost", port)
                     }
                     execute().body().toJsonWrapper()
                 }
-                if(res.getStr("status") != "1") return null
+                if(res.getStr("status") != "1") {
+                    exception("Response info: ${res.getStrOrNull("info")}")
+                }
                 val minDuration = res.getArray("route.transits").minOfOrNull {
                     it.cast<JSONObject>().getStr("duration").toInt()
                 }

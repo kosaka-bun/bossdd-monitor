@@ -1,6 +1,6 @@
 package de.honoka.bossddmonitor.service
 
-import de.honoka.bossddmonitor.common.GlobalComponents
+import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.JobPushRecord
 import de.honoka.bossddmonitor.entity.Subscription
@@ -9,14 +9,13 @@ import de.honoka.qqrobot.framework.api.RobotFramework
 import de.honoka.qqrobot.framework.api.model.RobotMessageType
 import de.honoka.qqrobot.framework.api.model.RobotMultipartMessage
 import de.honoka.sdk.util.kotlin.basic.forEachCatching
+import de.honoka.sdk.util.kotlin.concurrent.ScheduledTask
 import de.honoka.sdk.util.kotlin.text.singleLine
 import de.honoka.sdk.util.kotlin.text.toJsonObject
 import de.honoka.sdk.util.kotlin.text.trimAllLines
 import de.honoka.sdk.util.various.ImageUtils
 import org.springframework.stereotype.Service
 import java.io.InputStream
-import java.util.concurrent.ScheduledFuture
-import java.util.concurrent.TimeUnit
 
 @Service
 class PushService(
@@ -26,32 +25,13 @@ class PushService(
     private val robotFramework: RobotFramework
 ) {
     
-    @Volatile
-    private var runningTask: ScheduledFuture<*>? = null
-    
-    @Synchronized
-    fun startup() {
-        stop()
-        val action: () -> Unit = {
-            runCatching {
-                doTask()
-            }
-        }
-        runningTask = GlobalComponents.scheduledExecutor.scheduleWithFixedDelay(
-            action, 1, 1, TimeUnit.MINUTES
-        )
-    }
-    
-    @Synchronized
-    fun stop() {
-        runningTask?.run {
-            cancel(true)
-            runningTask = null
-        }
+    val scheduledTask = ScheduledTask("1m", "1m") {
+        doTask()
     }
     
     private fun doTask() {
         subscriptionService.list().forEachCatching {
+            if(ServiceLauncher.appShutdown) return
             pushJobInfo(it)
         }
     }
@@ -90,7 +70,7 @@ class PushService(
                 $details
             """
         }.trimAllLines()
-        return ImageUtils.textToImage(text)
+        return ImageUtils.textToImageByLength(text, 60)
     }
     
     private fun getUrlToPush(jobInfo: JobInfo): String = when(jobInfo.platform) {

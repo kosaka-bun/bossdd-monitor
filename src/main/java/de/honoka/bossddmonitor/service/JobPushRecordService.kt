@@ -2,6 +2,7 @@ package de.honoka.bossddmonitor.service
 
 import cn.hutool.core.util.ObjectUtil
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl
+import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.JobPushRecord
 import de.honoka.bossddmonitor.entity.Subscription
@@ -16,6 +17,7 @@ class JobPushRecordService(
 ) : ServiceImpl<JobPushRecordMapper, JobPushRecord>() {
     
     fun scanAndCreateMissingRecords(subscription: Subscription) {
+        if(ServiceLauncher.appShutdown) return
         jobInfoService.baseMapper.getNoRecordsJobInfoList(subscription.userId!!).forEachCatching {
             checkAndCreate(it, subscription)
         }

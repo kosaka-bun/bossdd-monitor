@@ -1,11 +1,9 @@
 package de.honoka.bossddmonitor.config
 
-import de.honoka.bossddmonitor.common.GlobalComponents
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.sdk.spring.starter.core.context.springBean
 import de.honoka.sdk.util.file.FileUtils
 import de.honoka.sdk.util.kotlin.basic.log
-import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
 import jakarta.annotation.PostConstruct
 import jakarta.annotation.PreDestroy
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -29,7 +27,6 @@ class MainConfig {
     @PreDestroy
     fun beforeExit() {
         ServiceLauncher::class.springBean.stop()
-        GlobalComponents.scheduledExecutor.shutdownNowAndWait()
         log.info("Application has been closed.")
     }
 }
