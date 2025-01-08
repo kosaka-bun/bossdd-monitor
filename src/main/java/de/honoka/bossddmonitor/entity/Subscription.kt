@@ -44,7 +44,7 @@ data class Subscription(
     var minSalary: Int? = null,
     
     /**
-     * 岗位的最大通勤时间
+     * 岗位的最大通勤时间（分钟）
      */
     var maxCommutingDuration: Int? = null,
     

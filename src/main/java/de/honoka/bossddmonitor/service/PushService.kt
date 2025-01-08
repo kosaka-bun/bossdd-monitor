@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.service
 
+import cn.hutool.core.date.DateUtil
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.JobPushRecord
@@ -65,7 +66,8 @@ class PushService(
     private fun getImageToPush(jobInfo: JobInfo, jobPushRecord: JobPushRecord): InputStream {
         val text = jobInfo.run {
             """
-                【${company}】 - $title <b>$salary</b>
+                【${company}】$title
+                薪资：<b>$salary</b>
                 公司全名：$companyFullName
                 规模：$companyScale
                 HR：$hrName
@@ -73,7 +75,7 @@ class PushService(
                 经验要求：$experience
                 岗位地址：$address
                 通勤时间：${jobPushRecord.commuteDuration}分钟
-                信息更新时间：$updateTime
+                信息更新时间：${DateUtil.formatDateTime(updateTime)}
                 
                 $details
             """

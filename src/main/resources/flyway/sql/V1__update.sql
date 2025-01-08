@@ -9,7 +9,7 @@ create table subscription
     min_company_scale      int comment '岗位的最小公司规模',
     max_experience         int comment '岗位的最大经验要求（年）',
     min_salary             int comment '岗位的最低薪资待遇（千）',
-    max_commuting_duration int comment '岗位的最大通勤时间',
+    max_commuting_duration int comment '岗位的最大通勤时间（分钟）',
     block_words            text comment '岗位信息屏蔽关键词（json）',
     block_regexes          text comment '岗位信息屏蔽正则表达式（json）',
     user_gps_location      varchar(255) comment '用户住址（经纬度）',

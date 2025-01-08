@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.platform
 
+import cn.hutool.json.JSONObject
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
@@ -48,6 +49,22 @@ class BossddPlatform(
             20 to "406",
             50 to "407"
         )
+        
+        val cityCodeMap = HashMap<String, String>().also {
+            @Suppress("JAVA_CLASS_ON_COMPANION")
+            val data = javaClass.getResource("/static-data/bossdd/city-code.json")
+            data!!.readText().toJsonArray().forEach { jo ->
+                jo as JSONObject
+                it[jo["code"]!!.toString()] = jo.getStr("name")
+                jo.getJSONArray("subLevelModelList")?.forEach { jo2 ->
+                    jo2 as JSONObject
+                    it[jo2["code"]!!.toString()] = jo2.getStr("name")
+                }
+            }
+            HashMap<String, String>(it).forEach { (k, v) ->
+                it[v] = k
+            }
+        }
     }
     
     override fun doDataExtracting(subscription: Subscription) {
@@ -76,7 +93,9 @@ class BossddPlatform(
                         jobInfoService.updateById(incrementJobInfo)
                         return@forEachWrapper
                     }
-                    val jobInfo = parseJobInfo(it)
+                    val jobInfo = parseJobInfo(it).apply {
+                        fromSearchWord = subscription.searchWord
+                    }
                     runCatching {
                         jobInfoService.isEligible(jobInfo, subscription)
                     }.getOrDefault(true).let { b ->
