@@ -1,6 +1,7 @@
 package de.honoka.bossddmonitor.controller
 
 import de.honoka.bossddmonitor.service.SubscriptionService
+import de.honoka.qqrobot.framework.api.model.RobotMessage
 import de.honoka.qqrobot.starter.command.CommandMethodArgs
 import de.honoka.qqrobot.starter.common.annotation.Command
 import de.honoka.qqrobot.starter.common.annotation.RobotController
@@ -26,5 +27,10 @@ class SubscriptionController(private val subscriptionService: SubscriptionServic
     @Command("注册")
     fun register(args: CommandMethodArgs) {
         subscriptionService.create(args)
+    }
+    
+    @Command("查询屏蔽词", argsCount = 1)
+    fun getBlockWordsAndRegexes(args: CommandMethodArgs): RobotMessage<*> = run {
+        subscriptionService.getBlockWordsAndRegexes(args.qq, args.getString(0))
     }
 }

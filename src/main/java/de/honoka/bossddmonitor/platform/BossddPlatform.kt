@@ -61,7 +61,7 @@ class BossddPlatform(
                     it[jo2["code"]!!.toString()] = jo2.getStr("name")
                 }
             }
-            HashMap<String, String>(it).forEach { (k, v) ->
+            HashMap(it).forEach { (k, v) ->
                 it[v] = k
             }
         }

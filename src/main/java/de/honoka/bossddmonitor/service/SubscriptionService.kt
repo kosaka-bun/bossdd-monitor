@@ -4,11 +4,15 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.SubscriptionMapper
 import de.honoka.bossddmonitor.platform.BossddPlatform
+import de.honoka.qqrobot.framework.api.model.RobotMessage
 import de.honoka.qqrobot.starter.command.CommandMethodArgs
 import de.honoka.qqrobot.starter.component.session.RobotSession
 import de.honoka.qqrobot.starter.component.session.SessionManager
+import de.honoka.sdk.util.kotlin.basic.exception
 import de.honoka.sdk.util.kotlin.text.singleLine
+import de.honoka.sdk.util.kotlin.text.toJsonArray
 import de.honoka.sdk.util.kotlin.text.trimAllLines
+import de.honoka.sdk.util.various.ImageUtils
 import org.springframework.stereotype.Service
 
 @Service
@@ -43,7 +47,8 @@ class SubscriptionService(
     fun getSubscriptionStatusOfUser(userId: Long): String {
         val subscription = baseMapper.getByUserId(userId)
         subscription ?: return ConstMessages.NO_SUBSCRIPTION
-        return if(subscription.enabled!!) "已启用" else "未启用"
+        val status = if(subscription.enabled!!) "已启用" else "未启用"
+        return "当前订阅状态：$status"
     }
     
     fun setSubscriptionStatusOfUser(userId: Long, status: String): String {
@@ -61,7 +66,7 @@ class SubscriptionService(
             }
         }
         updateById(params)
-        return getSubscriptionStatusOfUser(userId)
+        return "修改成功，${getSubscriptionStatusOfUser(userId)}"
     }
     
     fun create(args: CommandMethodArgs) {
@@ -125,5 +130,23 @@ class SubscriptionService(
             )
             enabled = false
         }
+    }
+    
+    fun getBlockWordsAndRegexes(userId: Long, type: String): RobotMessage<*> {
+        if(type !in setOf("关键词", "正则")) {
+            return RobotMessage.text("要查询的类型有误，请提供“关键词”或“正则”")
+        }
+        val subscription = baseMapper.getByUserId(userId)
+        subscription ?: return RobotMessage.text(ConstMessages.NO_SUBSCRIPTION)
+        val json = when(type) {
+            "关键词" -> subscription.blockWords
+            "正则" -> subscription.blockRegexes
+            else -> exception()
+        }
+        val result = json?.toJsonArray().run {
+            if(isNullOrEmpty()) return RobotMessage.text("暂无屏蔽的$type")
+            mapIndexed { i, s -> "${i + 1}.【$s】" }.joinToString("，")
+        }
+        return RobotMessage.image(ImageUtils.textToImageByLength(result, 40))
     }
 }
