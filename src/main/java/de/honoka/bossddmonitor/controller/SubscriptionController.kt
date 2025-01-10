@@ -33,4 +33,9 @@ class SubscriptionController(private val subscriptionService: SubscriptionServic
     fun getBlockWordsAndRegexes(args: CommandMethodArgs): RobotMessage<*> = run {
         subscriptionService.getBlockWordsAndRegexes(args.qq, args.getString(0))
     }
+    
+    @Command("管理屏蔽词", argsCount = 3)
+    fun manageBlockWordsAndRegexes(args: CommandMethodArgs): String = run {
+        subscriptionService.manageBlockWordsAndRegexes(args)
+    }
 }

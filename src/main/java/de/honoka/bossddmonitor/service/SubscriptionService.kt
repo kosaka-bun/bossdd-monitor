@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.service
 
+import cn.hutool.json.JSONArray
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.SubscriptionMapper
@@ -148,5 +149,56 @@ class SubscriptionService(
             mapIndexed { i, s -> "${i + 1}.【$s】" }.joinToString("，")
         }
         return RobotMessage.image(ImageUtils.textToImageByLength(result, 40))
+    }
+    
+    fun manageBlockWordsAndRegexes(args: CommandMethodArgs): String {
+        val type = args.getString(0)
+        if(type !in setOf("关键词", "正则")) {
+            return "要管理的类型有误，请提供“关键词”或“正则”"
+        }
+        val action = args.getString(1)
+        if(action !in setOf("添加", "删除")) {
+            return "要执行的操作有误，请提供“添加”或“删除”"
+        }
+        val subscription = baseMapper.getByUserId(args.qq)
+        subscription ?: return ConstMessages.NO_SUBSCRIPTION
+        var isRegex = false
+        val json = when(type) {
+            "关键词" -> subscription.blockWords
+            "正则" -> {
+                isRegex = true
+                subscription.blockRegexes
+            }
+            else -> exception()
+        }?.toJsonArray() ?: JSONArray()
+        when(action) {
+            "添加" -> {
+                val content = args.getString(2)
+                if(isRegex) {
+                    runCatching {
+                        Regex(content)
+                    }.getOrElse {
+                        return "正则表达式有误，请重新提供"
+                    }
+                }
+                json.add(content)
+            }
+            "删除" -> {
+                val index = (args.getInt(2) - 1)
+                if(index < 0 || index > json.lastIndex) {
+                    return "要删除的序号不存在，请重新提供"
+                }
+                json.removeAt(index)
+            }
+        }
+        val params = Subscription().apply {
+            id = subscription.id
+            when(type) {
+                "关键词" -> blockWords = json.toString()
+                "正则" -> blockRegexes = json.toString()
+            }
+        }
+        updateById(params)
+        return "${action}成功"
     }
 }

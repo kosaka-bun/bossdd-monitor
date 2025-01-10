@@ -6,12 +6,10 @@ import de.honoka.bossddmonitor.config.MonitorProperties
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.platform.Platform
 import de.honoka.qqrobot.starter.component.ExceptionReporter
-import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.basic.weekdayNum
 import de.honoka.sdk.util.kotlin.concurrent.ScheduledTask
 import org.springframework.stereotype.Service
 import java.util.concurrent.RejectedExecutionException
-import java.util.concurrent.TimeoutException
 
 @Service
 class MonitorService(
@@ -66,10 +64,6 @@ class MonitorService(
             platform.doDataExtracting(subscription)
         }.getOrElse {
             if(it is RejectedExecutionException) return
-            if(it is TimeoutException) {
-                log.error("", it)
-                return
-            }
             exceptionReporter.report(it)
         }
     }
