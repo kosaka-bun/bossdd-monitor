@@ -2,6 +2,7 @@ package de.honoka.bossddmonitor.entity
 
 import com.baomidou.mybatisplus.annotation.IdType
 import com.baomidou.mybatisplus.annotation.TableId
+import org.intellij.lang.annotations.Language
 
 data class Subscription(
     
@@ -67,4 +68,11 @@ data class Subscription(
      * 是否启用此订阅
      */
     var enabled: Boolean? = null
-)
+) {
+    
+    companion object {
+        
+        @Language("RegExp")
+        const val USER_GPS_LOCATION_PATTERN = "\\d+\\.\\d+,\\d+\\.\\d+"
+    }
+}

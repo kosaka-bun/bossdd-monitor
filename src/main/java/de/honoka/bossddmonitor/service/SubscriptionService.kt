@@ -8,8 +8,6 @@ import de.honoka.bossddmonitor.platform.BossddPlatform
 import de.honoka.qqrobot.framework.api.model.RobotMessage
 import de.honoka.qqrobot.starter.command.CommandMethodArgs
 import de.honoka.qqrobot.starter.component.session.RobotSession
-import de.honoka.qqrobot.starter.component.session.SessionManager
-import de.honoka.sdk.util.kotlin.basic.exception
 import de.honoka.sdk.util.kotlin.text.singleLine
 import de.honoka.sdk.util.kotlin.text.toJsonArray
 import de.honoka.sdk.util.kotlin.text.trimAllLines
@@ -17,9 +15,7 @@ import de.honoka.sdk.util.various.ImageUtils
 import org.springframework.stereotype.Service
 
 @Service
-class SubscriptionService(
-    private val sessionManager: SessionManager
-) : ServiceImpl<SubscriptionMapper, Subscription>() {
+class SubscriptionService : ServiceImpl<SubscriptionMapper, Subscription>() {
     
     private object ConstMessages {
         
@@ -27,11 +23,10 @@ class SubscriptionService(
     }
     
     fun getSubscriptionOfUser(userId: Long): String {
-        val subscription = baseMapper.getByUserId(userId)
-        subscription ?: return ConstMessages.NO_SUBSCRIPTION
+        val subscription = baseMapper.getByUserId(userId) ?: return ConstMessages.NO_SUBSCRIPTION
         val result = subscription.run {
             """
-                接收推送消息的群号：$receiverGroupId
+                接收推送消息的群号：${receiverGroupId ?: "无（私聊）"}
                 搜索关键词：$searchWord
                 城市：${BossddPlatform.cityCodeMap[cityCode]}
                 城市代码：$cityCode
@@ -40,56 +35,30 @@ class SubscriptionService(
                 岗位的最低薪资待遇：${minSalary}K
                 岗位的最大通勤时间：${maxCommutingDuration}分钟
                 用户住址（经纬度）：$userGpsLocation
+                状态：${if(enabled!!) "已启用" else "未启用"}
             """.trimAllLines()
         }
         return result
     }
     
-    fun getSubscriptionStatusOfUser(userId: Long): String {
-        val subscription = baseMapper.getByUserId(userId)
-        subscription ?: return ConstMessages.NO_SUBSCRIPTION
-        val status = if(subscription.enabled!!) "已启用" else "未启用"
-        return "当前订阅状态：$status"
-    }
-    
-    fun setSubscriptionStatusOfUser(userId: Long, status: String): String {
-        val subscription = baseMapper.getByUserId(userId)
-        subscription ?: return ConstMessages.NO_SUBSCRIPTION
-        val params = Subscription().apply {
-            id = subscription.id
-            enabled = when(status) {
-                "开" -> true
-                "关" -> false
-                else -> return "请使用“开”或“关”作为参数值"
-            }
-            if(enabled == subscription.enabled) {
-                return "订阅目前已处于此状态，无需修改"
-            }
+    fun create(session: RobotSession) {
+        baseMapper.getByUserId(session.qq)?.let {
+            session.reply("您已进行过注册，无需重复注册")
+            return
         }
-        updateById(params)
-        return "修改成功，${getSubscriptionStatusOfUser(userId)}"
-    }
-    
-    fun create(args: CommandMethodArgs) {
-        sessionManager.openSession(args.group, args.qq) {
-            action = action@ {
-                baseMapper.getByUserId(args.qq)?.let {
-                    reply("您已进行过注册，无需重复注册")
-                    return@action
-                }
-                val subscription = parseByRobotSession(this)
-                save(subscription)
-                """
-                    注册成功，订阅状态默认为关闭状态，此时可直接启用订阅，或在配置完成屏蔽词或
-                    要屏蔽的正则表达式后再启用
-                """.singleLine().let { reply(it) }
-            }
-        }
+        val subscription = parseByRobotSession(session)
+        save(subscription)
+        session.reply(
+            """
+                注册成功，订阅状态默认为关闭状态，此时可直接启用订阅，或在配置完成
+                屏蔽词或要屏蔽的正则表达式后再启用
+            """.singleLine()
+        )
     }
     
     private fun parseByRobotSession(session: RobotSession): Subscription = session.run {
         Subscription().apply {
-            userId = session.qq
+            userId = qq
             receiverGroupId = waitForReply(
                 "请回复接收推送消息的群号，回复“none”表示使用私聊消息接收",
                 "提供的群号有误，请回复数字或“none”",
@@ -126,23 +95,72 @@ class SubscriptionService(
             userGpsLocation = waitForReply(
                 "请回复用户住址（经纬度，如“121.320081,31.193964”）",
                 resultPredicate = {
-                    it.matches(Regex("\\d+\\.\\d+,\\d+\\.\\d+"))
+                    it.matches(Regex(Subscription.USER_GPS_LOCATION_PATTERN))
                 }
             )
             enabled = false
         }
     }
     
-    fun getBlockWordsAndRegexes(userId: Long, type: String): RobotMessage<*> {
-        if(type !in setOf("关键词", "正则")) {
-            return RobotMessage.text("要查询的类型有误，请提供“关键词”或“正则”")
+    fun update(args: CommandMethodArgs): String {
+        val subscription = baseMapper.getByUserId(args.qq) ?: return ConstMessages.NO_SUBSCRIPTION
+        val fields = listOf(
+            "接收推送群号", "搜索关键词", "城市", "最小公司规模", "最大经验要求", "最低薪资",
+            "最大通勤时间", "用户住址", "状态"
+        )
+        val contentIndex = 1
+        var useParams = true
+        val params = Subscription().apply {
+            id = subscription.id
+            when(args.getString(0)) {
+                fields[0] -> receiverGroupId = run {
+                    if(args.getString(contentIndex).lowercase() == "none") {
+                        ktUpdate().run {
+                            eq(Subscription::id, id)
+                            set(Subscription::receiverGroupId, null)
+                            update()
+                        }
+                        useParams = false
+                        null
+                    } else {
+                        args.getLong(contentIndex)
+                    }
+                }
+                fields[1] -> searchWord = args.getString(contentIndex)
+                fields[2] -> cityCode = BossddPlatform.cityCodeMap[args.getString(contentIndex)] ?: run {
+                    return "未找到对应的城市，请重新提供"
+                }
+                fields[3] -> minCompanyScale = args.getInt(contentIndex)
+                fields[4] -> maxExperience = args.getInt(contentIndex)
+                fields[5] -> minSalary = args.getInt(contentIndex)
+                fields[6] -> maxCommutingDuration = args.getInt(contentIndex)
+                fields[7] -> userGpsLocation = args.getString(contentIndex).also {
+                    if(!it.matches(Regex(Subscription.USER_GPS_LOCATION_PATTERN))) {
+                        return "用户住址经纬度的格式有误，请重新提供（如“121.320081,31.193964”）"
+                    }
+                }
+                fields[8] -> enabled = when(args.getString(contentIndex)) {
+                    "开" -> true
+                    "关" -> false
+                    else -> return "状态值有误，请提供“开”或“关”"
+                }
+                else -> {
+                    val fieldNames = fields.joinToString("、") { "“$it”" }
+                    return "要修改的字段名有误，请提供其中一个：$fieldNames"
+                }
+            }
         }
+        if(useParams) updateById(params)
+        return "修改成功，当前订阅信息如下：\n${getSubscriptionOfUser(args.qq)}"
+    }
+    
+    fun getBlockWordsAndRegexes(userId: Long, type: String): RobotMessage<*> {
         val subscription = baseMapper.getByUserId(userId)
         subscription ?: return RobotMessage.text(ConstMessages.NO_SUBSCRIPTION)
         val json = when(type) {
             "关键词" -> subscription.blockWords
             "正则" -> subscription.blockRegexes
-            else -> exception()
+            else -> return RobotMessage.text("要查询的类型有误，请提供“关键词”或“正则”")
         }
         val result = json?.toJsonArray().run {
             if(isNullOrEmpty()) return RobotMessage.text("暂无屏蔽的$type")
@@ -152,16 +170,9 @@ class SubscriptionService(
     }
     
     fun manageBlockWordsAndRegexes(args: CommandMethodArgs): String {
+        val subscription = baseMapper.getByUserId(args.qq) ?: return ConstMessages.NO_SUBSCRIPTION
         val type = args.getString(0)
-        if(type !in setOf("关键词", "正则")) {
-            return "要管理的类型有误，请提供“关键词”或“正则”"
-        }
         val action = args.getString(1)
-        if(action !in setOf("添加", "删除")) {
-            return "要执行的操作有误，请提供“添加”或“删除”"
-        }
-        val subscription = baseMapper.getByUserId(args.qq)
-        subscription ?: return ConstMessages.NO_SUBSCRIPTION
         var isRegex = false
         val json = when(type) {
             "关键词" -> subscription.blockWords
@@ -169,7 +180,7 @@ class SubscriptionService(
                 isRegex = true
                 subscription.blockRegexes
             }
-            else -> exception()
+            else -> return "要管理的类型有误，请提供“关键词”或“正则”"
         }?.toJsonArray() ?: JSONArray()
         when(action) {
             "添加" -> {
@@ -190,15 +201,15 @@ class SubscriptionService(
                 }
                 json.removeAt(index)
             }
+            else -> return "要执行的操作有误，请提供“添加”或“删除”"
         }
-        val params = Subscription().apply {
+        updateById(Subscription().apply {
             id = subscription.id
             when(type) {
                 "关键词" -> blockWords = json.toString()
                 "正则" -> blockRegexes = json.toString()
             }
-        }
-        updateById(params)
+        })
         return "${action}成功"
     }
 }
