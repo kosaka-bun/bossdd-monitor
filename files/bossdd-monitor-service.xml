@@ -1,0 +1,11 @@
+<service>
+    <id>bossdd-monitor-service</id>
+    <name>bossdd-monitor-service</name>
+    <description>bossdd-monitor-service</description>
+    <executable>java</executable>
+    <arguments>-jar -Dfile.encoding=UTF-8 -Dspring.profiles.active=prod bossdd-monitor.jar</arguments>
+    <startmode>Automatic</startmode>
+    <depend>MySQL80</depend>
+    <log mode="roll" />
+    <logpath>%BASE%\service\logs</logpath>
+</service>

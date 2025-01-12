@@ -42,6 +42,7 @@ dependencies {
     implementation("com.baomidou:mybatis-plus-spring-boot3-starter:3.5.5")
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.flywaydb:flyway-core")
+    implementation("org.flywaydb:flyway-mysql")
     implementation("org.seleniumhq.selenium:selenium-java")
     kapt("org.springframework.boot:spring-boot-configuration-processor")
     libs.lombok.let {

@@ -21,7 +21,7 @@ data class MonitorProperties(
     var weekdayRange: String = "1-6",
     
     /**
-     * 一天内需要执行监控任务的小时范围（在左边界之后，右边界之前）
+     * 一天内需要执行监控任务的小时范围（在左边界之后，包含左边界，右边界之前）
      */
     var hourRange: String = "8-22"
 ) {
