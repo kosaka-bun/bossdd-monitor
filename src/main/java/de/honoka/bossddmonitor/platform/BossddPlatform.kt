@@ -1,13 +1,13 @@
 package de.honoka.bossddmonitor.platform
 
 import cn.hutool.json.JSONObject
+import de.honoka.bossddmonitor.common.ExtendedExceptionReporter
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.service.BrowserService
 import de.honoka.bossddmonitor.service.JobInfoService
 import de.honoka.bossddmonitor.service.JobPushRecordService
-import de.honoka.qqrobot.starter.component.ExceptionReporter
 import de.honoka.sdk.util.kotlin.text.*
 import org.jsoup.Jsoup
 import org.springframework.stereotype.Component
@@ -19,7 +19,7 @@ class BossddPlatform(
     private val browserService: BrowserService,
     private val jobInfoService: JobInfoService,
     private val jobPushRecordService: JobPushRecordService,
-    private val exceptionReporter: ExceptionReporter
+    private val exceptionReporter: ExtendedExceptionReporter
 ) : Platform {
     
     companion object {

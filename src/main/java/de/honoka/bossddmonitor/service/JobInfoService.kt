@@ -4,12 +4,12 @@ import cn.hutool.core.util.ObjectUtil
 import cn.hutool.http.HttpUtil
 import cn.hutool.json.JSONObject
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl
+import de.honoka.bossddmonitor.common.ExtendedExceptionReporter
 import de.honoka.bossddmonitor.common.ProxyForwarder
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.JobInfoMapper
 import de.honoka.bossddmonitor.platform.PlatformEnum
-import de.honoka.qqrobot.starter.component.ExceptionReporter
 import de.honoka.sdk.util.kotlin.basic.cast
 import de.honoka.sdk.util.kotlin.basic.exception
 import de.honoka.sdk.util.kotlin.basic.tryBlockNullable
@@ -22,7 +22,7 @@ import org.springframework.stereotype.Service
 @Service
 class JobInfoService(
     private val proxyForwarder: ProxyForwarder,
-    private val exceptionReporter: ExceptionReporter
+    private val exceptionReporter: ExtendedExceptionReporter
 ) : ServiceImpl<JobInfoMapper, JobInfo>() {
     
     fun isEligible(jobInfo: JobInfo, subscription: Subscription): Boolean {

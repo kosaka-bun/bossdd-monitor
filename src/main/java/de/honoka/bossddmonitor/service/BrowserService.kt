@@ -34,6 +34,8 @@ class BrowserService(
     private val proxyForwarder: ProxyForwarder
 ) {
     
+    class OnErrorPageException : RuntimeException()
+    
     companion object {
         
         private val userAgent = """
@@ -158,7 +160,7 @@ class BrowserService(
                 outer@
                 for(i in 1..60) {
                     Thread.sleep(500)
-                    if(isOnErrorPage()) exception()
+                    if(isOnErrorPage()) throw OnErrorPageException()
                     if(resultList.isEmpty()) continue
                     for(r in resultList) {
                         val shouldTake = resultPredicate == null || runCatching {

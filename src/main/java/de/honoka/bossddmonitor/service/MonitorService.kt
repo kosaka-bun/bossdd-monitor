@@ -1,11 +1,11 @@
 package de.honoka.bossddmonitor.service
 
 import cn.hutool.core.date.DateTime
+import de.honoka.bossddmonitor.common.ExtendedExceptionReporter
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.config.MonitorProperties
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.platform.Platform
-import de.honoka.qqrobot.starter.component.ExceptionReporter
 import de.honoka.sdk.util.kotlin.basic.weekdayNum
 import de.honoka.sdk.util.kotlin.concurrent.ScheduledTask
 import org.springframework.stereotype.Service
@@ -16,7 +16,7 @@ class MonitorService(
     private val monitorProperties: MonitorProperties,
     private val subscriptionService: SubscriptionService,
     private val jobPushRecordService: JobPushRecordService,
-    private val exceptionReporter: ExceptionReporter,
+    private val exceptionReporter: ExtendedExceptionReporter,
     private val platforms: List<Platform>
 ) {
     
