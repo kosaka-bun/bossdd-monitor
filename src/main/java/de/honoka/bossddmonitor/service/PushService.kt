@@ -34,8 +34,8 @@ class PushService(
             if(!it.enabled!!) return@forEach
             runCatching {
                 pushJobInfo(it)
-            }.getOrElse {
-                log.error("", it)
+            }.getOrElse { e ->
+                log.error("", e)
             }
         }
     }
@@ -44,6 +44,13 @@ class PushService(
         val record = jobPushRecordService.baseMapper.getFirstNotPushedRecord(subscription.userId!!)
         record ?: return
         val jobInfo = jobInfoService.getById(record.jobInfoId) ?: return
+        if(!jobInfoService.isEligible(jobInfo, subscription)) {
+            jobPushRecordService.updateById(JobPushRecord().apply {
+                id = record.id
+                valid = false
+            })
+            return
+        }
         val message = RobotMultipartMessage().apply {
             add(RobotMessageType.IMAGE, getImageToPush(jobInfo, record))
             add(RobotMessageType.TEXT, getUrlToPush(jobInfo))

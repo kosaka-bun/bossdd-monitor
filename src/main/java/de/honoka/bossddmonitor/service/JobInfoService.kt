@@ -46,7 +46,7 @@ class JobInfoService(
                 return false
             }
         }
-        return !hasBlockWords(jobInfo, subscription)
+        return !hasBlockWords(jobInfo, subscription) && isRelatedSearchWord(jobInfo, subscription)
     }
     
     private fun hasBlockWords(jobInfo: JobInfo, subscription: Subscription): Boolean = subscription.run {
@@ -70,10 +70,10 @@ class JobInfoService(
         return false
     }
     
-    fun isRelatedSearchWord(jobInfo: JobInfo, searchWord: String?): Boolean {
-        if(ObjectUtil.hasNull(jobInfo.fromSearchWord, searchWord)) return false
+    private fun isRelatedSearchWord(jobInfo: JobInfo, subscription: Subscription): Boolean {
+        if(ObjectUtil.hasNull(jobInfo.fromSearchWord, subscription.searchWord)) return false
         val fromSearchWord = jobInfo.fromSearchWord!!.lowercase()
-        val lowerSearchWord = searchWord!!.lowercase()
+        val lowerSearchWord = subscription.searchWord!!.lowercase()
         return fromSearchWord.contains(lowerSearchWord) || lowerSearchWord.contains(fromSearchWord)
     }
     
