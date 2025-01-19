@@ -1,7 +1,7 @@
 package de.honoka.bossddmonitor.controller
 
 import de.honoka.bossddmonitor.service.SubscriptionService
-import de.honoka.qqrobot.framework.api.model.RobotMessage
+import de.honoka.qqrobot.framework.api.message.RobotMessage
 import de.honoka.qqrobot.starter.command.CommandMethodArgs
 import de.honoka.qqrobot.starter.common.annotation.Command
 import de.honoka.qqrobot.starter.common.annotation.RobotController

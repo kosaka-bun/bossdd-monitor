@@ -76,8 +76,7 @@ class BrowserService(
         closeBrowser()
     }
     
-    @Synchronized
-    fun initBrowser(headless: Boolean = browserProperties.defaultHeadless) {
+    private fun initBrowser(headless: Boolean = browserProperties.defaultHeadless) {
         if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
         browserOrNull?.let {
             closeBrowser()
@@ -118,8 +117,7 @@ class BrowserService(
         log.info("Selenium Chrome driver has been initialized.")
     }
     
-    @Synchronized
-    fun closeBrowser() {
+    private fun closeBrowser() {
         browserOrNull ?: return
         browser.run {
             devTools.close()
@@ -129,8 +127,7 @@ class BrowserService(
         log.info("Selenium Chrome driver has been closed.")
     }
     
-    @Synchronized
-    fun clearUserDataDir() {
+    private fun clearUserDataDir() {
         val dir = File(browserProperties.userDataDir.absolutePath)
         if(dir.exists()) dir.deleteRecursively()
     }
@@ -172,7 +169,7 @@ class BrowserService(
                         }
                     }
                 }
-                result ?: exception("Cannot get the response of $urlPrefixToWait")
+                result ?: throw TimeoutException("Cannot get the response of $urlPrefixToWait")
             }
             try {
                 urlPrefixToResponseMap[urlPrefixToWait] = resultList

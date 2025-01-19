@@ -7,8 +7,8 @@ import de.honoka.bossddmonitor.entity.JobPushRecord
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.platform.PlatformEnum
 import de.honoka.qqrobot.framework.api.RobotFramework
-import de.honoka.qqrobot.framework.api.model.RobotMessageType
-import de.honoka.qqrobot.framework.api.model.RobotMultipartMessage
+import de.honoka.qqrobot.framework.api.message.RobotMessage
+import de.honoka.qqrobot.framework.api.message.RobotMultipartMessage
 import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.concurrent.ScheduledTask
 import de.honoka.sdk.util.kotlin.text.singleLine
@@ -52,8 +52,9 @@ class PushService(
             return
         }
         val message = RobotMultipartMessage().apply {
-            add(RobotMessageType.IMAGE, getImageToPush(jobInfo, record))
-            add(RobotMessageType.TEXT, getUrlToPush(jobInfo))
+            add(RobotMessage.text("【${jobInfo.company}】${jobInfo.title}"))
+            add(RobotMessage.image(getImageToPush(jobInfo, record)))
+            add(RobotMessage.text(getUrlToPush(jobInfo)))
         }
         robotFramework.run {
             subscription.run {

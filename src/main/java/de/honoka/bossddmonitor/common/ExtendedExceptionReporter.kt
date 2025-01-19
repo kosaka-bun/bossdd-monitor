@@ -5,8 +5,8 @@ import cn.hutool.core.exceptions.ExceptionUtil
 import cn.hutool.json.JSONUtil
 import de.honoka.bossddmonitor.service.BrowserService
 import de.honoka.qqrobot.framework.ExtendedRobotFramework
-import de.honoka.qqrobot.framework.api.model.RobotMessage
-import de.honoka.qqrobot.framework.api.model.RobotMultipartMessage
+import de.honoka.qqrobot.framework.api.message.RobotMessage
+import de.honoka.qqrobot.framework.api.message.RobotMultipartMessage
 import de.honoka.qqrobot.starter.component.ExceptionReporter
 import de.honoka.sdk.util.kotlin.basic.cast
 import de.honoka.sdk.util.kotlin.basic.log
@@ -56,8 +56,9 @@ class ExtendedExceptionReporter(
     }
 
     fun report(t: Throwable) {
-        val blocked = when(t) {
-            is TimeoutException -> checkException(t)
+        val cause = ExceptionUtil.getRootCause(t)
+        val blocked = when(cause) {
+            is TimeoutException -> checkException(cause)
             is BrowserService.OnErrorPageException -> {
                 counts.onErrorPage.incrementAndGet()
                 true
@@ -65,9 +66,9 @@ class ExtendedExceptionReporter(
             else -> false
         }
         if(blocked) {
-            log.error("", t)
+            log.error("", cause)
         } else {
-            exceptionReporter.report(t)
+            exceptionReporter.report(cause)
         }
     }
     

@@ -5,7 +5,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.SubscriptionMapper
 import de.honoka.bossddmonitor.platform.BossddPlatform
-import de.honoka.qqrobot.framework.api.model.RobotMessage
+import de.honoka.qqrobot.framework.api.message.RobotMessage
 import de.honoka.qqrobot.starter.command.CommandMethodArgs
 import de.honoka.qqrobot.starter.component.session.RobotSession
 import de.honoka.sdk.util.kotlin.text.singleLine
