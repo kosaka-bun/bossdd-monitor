@@ -77,7 +77,6 @@ class BossddPlatform(
         fun url(page: Int) = "$urlPrefix&page=$page"
         val apiUrl = "https://www.zhipin.com/wapi/zpgeek/search/joblist.json"
         repeat(10) { i ->
-            browserService.ensureIsActive()
             val res = browserService.waitForResponse(url(i + 1), apiUrl) {
                 it.toJsonWrapper().getInt("code") == 0
             }

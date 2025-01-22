@@ -7,6 +7,10 @@ import java.nio.file.Paths
 @ConfigurationProperties("app.browser")
 data class BrowserProperties(
     
+    var executablePath: String? = null,
+    
+    var startProcessByApp: Boolean = false,
+    
     var userDataDir: UserDataDir = UserDataDir(),
     
     var defaultHeadless: Boolean = true,

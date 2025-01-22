@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.service
 
+import cn.hutool.core.util.ArrayUtil
 import de.honoka.bossddmonitor.common.ProxyForwarder
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.config.BrowserProperties
@@ -10,6 +11,7 @@ import de.honoka.sdk.util.kotlin.basic.log
 import de.honoka.sdk.util.kotlin.basic.tryBlock
 import de.honoka.sdk.util.kotlin.concurrent.getOrCancel
 import de.honoka.sdk.util.kotlin.concurrent.shutdownNowAndWait
+import de.honoka.sdk.util.kotlin.net.socket.SocketUtils
 import de.honoka.sdk.util.kotlin.text.singleLine
 import org.intellij.lang.annotations.Language
 import org.openqa.selenium.Dimension
@@ -20,6 +22,7 @@ import org.openqa.selenium.devtools.Connection
 import org.openqa.selenium.devtools.DevTools
 import org.openqa.selenium.devtools.v85.network.Network
 import org.openqa.selenium.devtools.v85.network.model.ResponseReceived
+import org.openqa.selenium.manager.SeleniumManager
 import org.springframework.stereotype.Service
 import java.awt.Toolkit
 import java.io.File
@@ -43,6 +46,8 @@ class BrowserService(
             (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36
         """.singleLine()
     }
+    
+    private var browserProcess: Process? = null
 
     private var browserOrNull: ChromeDriver? = null
     
@@ -55,8 +60,7 @@ class BrowserService(
         1, 3, 60, TimeUnit.SECONDS
     )
     
-    @Volatile
-    private lateinit var urlPrefixToResponseMap: ConcurrentMap<String, MutableList<String>>
+    private val urlPrefixToResponseMap = ConcurrentHashMap<String, MutableList<String>>()
     
     @Volatile
     private var hasBeenShutdown = false
@@ -77,23 +81,32 @@ class BrowserService(
     }
     
     private fun initBrowser(headless: Boolean = browserProperties.defaultHeadless) {
-        if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
-        browserOrNull?.let {
-            closeBrowser()
-            TimeUnit.SECONDS.sleep(3)
+        tryBlock(3) {
+            doInitBrowser(headless)
         }
-        urlPrefixToResponseMap = ConcurrentHashMap()
-        val options = ChromeOptions().apply {
+    }
+    
+    private fun doInitBrowser(headless: Boolean) {
+        if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
+        closeBrowser()
+        val chromeArgs = ArrayList<String>().apply {
             val userDataDir = browserProperties.userDataDir.absolutePath
             log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
-            addArguments("--user-data-dir=$userDataDir")
-            if(headless) addArguments("--headless")
+            add("--user-data-dir=$userDataDir")
+            if(headless) add("--headless")
             proxyForwarder.forwarder?.run {
-                addArguments("--proxy-server=localhost:$port")
+                add("--proxy-server=localhost:$port")
             }
-            addArguments("--user-agent=$userAgent")
-            val prefs = mapOf("profile.managed_default_content_settings.images" to 2)
-            setExperimentalOption("prefs", prefs)
+            add("--user-agent=$userAgent")
+            add("--blink-settings=imagesEnabled=false")
+        }
+        val options = ChromeOptions().apply {
+            if(browserProperties.startProcessByApp) {
+                val port = startBrowserProcess(chromeArgs)
+                setExperimentalOption("debuggerAddress", "localhost:$port")
+            } else {
+                addArguments(chromeArgs)
+            }
         }
         browserOrNull = ChromeDriver(options)
         browser.run {
@@ -118,12 +131,19 @@ class BrowserService(
     }
     
     private fun closeBrowser() {
-        browserOrNull ?: return
-        browser.run {
+        if(ArrayUtil.isAllNull(browserProcess, browserOrNull)) return
+        browserOrNull?.runCatching {
             devTools.close()
             quit()
+            browserOrNull = null
         }
-        browserOrNull = null
+        browserProcess?.runCatching {
+            if(isAlive) {
+                destroy()
+                waitFor(5, TimeUnit.SECONDS)
+            }
+            browserProcess = null
+        }
         log.info("Selenium Chrome driver has been closed.")
     }
     
@@ -132,8 +152,26 @@ class BrowserService(
         if(dir.exists()) dir.deleteRecursively()
     }
     
+    private fun startBrowserProcess(args: List<String>): Int {
+        val executablePath = run {
+            val path = browserProperties.executablePath ?: run {
+                SeleniumManager.getInstance().getBinaryPaths(listOf("--browser", "chrome")).browserPath
+            } ?: return@run null
+            File(path).run {
+                if(exists() && !isDirectory) path else null
+            }
+        } ?: exception("No executable path is provided and connot find chrome executable automatically.")
+        val debuggingPort = SocketUtils.findAvailablePort(10010, 10)
+        browserProcess = ProcessBuilder(
+            executablePath,
+            *args.toTypedArray(),
+            "--remote-debugging-port=$debuggingPort"
+        ).start()
+        return debuggingPort
+    }
+    
     private fun loadBlankPage() {
-        browserOrNull ?: initBrowser()
+        ensureIsActive()
         browser.get("about:blank")
         Thread.sleep(500)
     }
@@ -185,8 +223,7 @@ class BrowserService(
         browser.executeScript("return $jsExpression") as T?
     }
     
-    @Synchronized
-    fun ensureIsActive() {
+    private fun ensureIsActive() {
         runCatching {
             browser.run {
                 //尝试获取以下属性的值，若无法获取将抛出异常，可视为浏览器已关闭
