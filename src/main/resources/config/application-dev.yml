@@ -20,6 +20,7 @@ honoka:
 app:
   proxy: localhost:10808
   browser:
+    start-process-by-app: true
     user-data-dir:
       path: ./build/selenium/user-data
     default-headless: false

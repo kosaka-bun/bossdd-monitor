@@ -177,8 +177,7 @@ class BrowserService(
     }
     
     private fun loadPage(url: String, waitMillisAfterLoad: Long = 0) {
-        proxyForwarder.forwarder?.closeAllConnections()
-        loadBlankPage()
+        ensureIsActive()
         browser.get(url)
         Thread.sleep(waitMillisAfterLoad)
     }
@@ -193,9 +192,14 @@ class BrowserService(
                 var result: String? = null
                 loadPage(urlToLoad)
                 outer@
-                for(i in 1..60) {
+                for(i in 1..120) {
                     Thread.sleep(500)
-                    if(isOnErrorPage()) throw OnErrorPageException()
+                    if(isOnErrorPage()) {
+                        browser.devTools.send(Network.clearBrowserCookies())
+                        proxyForwarder.forwarder?.closeAllConnections()
+                        loadBlankPage()
+                        throw OnErrorPageException()
+                    }
                     if(resultList.isEmpty()) continue
                     for(r in resultList) {
                         val shouldTake = resultPredicate == null || runCatching {
@@ -211,7 +215,7 @@ class BrowserService(
             }
             try {
                 urlPrefixToResponseMap[urlPrefixToWait] = resultList
-                return waiterExecutor.submit(action).getOrCancel(30, TimeUnit.SECONDS)
+                return waiterExecutor.submit(action).getOrCancel(60, TimeUnit.SECONDS)
             } finally {
                 urlPrefixToResponseMap.remove(urlPrefixToWait)
             }
