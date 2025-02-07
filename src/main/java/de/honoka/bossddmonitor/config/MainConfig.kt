@@ -1,5 +1,6 @@
 package de.honoka.bossddmonitor.config
 
+import cn.hutool.core.util.RandomUtil
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.sdk.spring.starter.core.context.springBean
 import de.honoka.sdk.util.kotlin.basic.log
@@ -32,5 +33,21 @@ class MainConfig {
 @ConfigurationProperties("app")
 data class MainProperties(
     
-    var proxy: String? = null
-)
+    var proxy: Proxy = Proxy()
+) {
+
+    data class Proxy(
+
+        var address: String? = null,
+
+        var localPort: Int = 10908,
+
+        var username: String? = null,
+
+        var password: String? = null
+    ) {
+
+        val usernameWithSession: String?
+            get() = username?.let { "$it-session-${RandomUtil.randomString(8)}" }
+    }
+}

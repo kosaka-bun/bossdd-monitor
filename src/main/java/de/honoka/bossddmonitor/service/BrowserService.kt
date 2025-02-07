@@ -1,7 +1,8 @@
 package de.honoka.bossddmonitor.service
 
+import cn.hutool.core.exceptions.ExceptionUtil
 import cn.hutool.core.util.ArrayUtil
-import de.honoka.bossddmonitor.common.ProxyForwarder
+import de.honoka.bossddmonitor.common.ProxyManager
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.config.BrowserProperties
 import de.honoka.sdk.util.concurrent.ThreadPoolUtils
@@ -34,7 +35,7 @@ import java.util.logging.Logger
 @Service
 class BrowserService(
     private val browserProperties: BrowserProperties,
-    private val proxyForwarder: ProxyForwarder
+    private val proxyManager: ProxyManager
 ) {
     
     class OnErrorPageException : RuntimeException()
@@ -91,11 +92,12 @@ class BrowserService(
         closeBrowser()
         val chromeArgs = ArrayList<String>().apply {
             val userDataDir = browserProperties.userDataDir.absolutePath
-            log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
+            this@BrowserService.log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
             add("--user-data-dir=$userDataDir")
             if(headless) add("--headless")
-            proxyForwarder.forwarder?.run {
-                add("--proxy-server=localhost:$port")
+            if(proxyManager.available) {
+                add("--proxy-server=localhost:${proxyManager.proxy.port}")
+                add("--ignore-certificate-errors")
             }
             add("--user-agent=$userAgent")
             add("--blink-settings=imagesEnabled=false")
@@ -181,44 +183,45 @@ class BrowserService(
         browser.get(url)
         Thread.sleep(waitMillisAfterLoad)
     }
-    
+
     @Synchronized
     fun waitForResponse(
         urlToLoad: String, urlPrefixToWait: String, resultPredicate: ((String) -> Boolean)? = null
-    ): String {
-        tryBlock(3) {
-            val resultList = Collections.synchronizedList(LinkedList<String>())
-            val action = Callable {
-                var result: String? = null
-                loadPage(urlToLoad)
-                outer@
-                for(i in 1..120) {
-                    Thread.sleep(500)
-                    if(isOnErrorPage()) {
-                        browser.devTools.send(Network.clearBrowserCookies())
-                        proxyForwarder.forwarder?.closeAllConnections()
-                        loadBlankPage()
-                        throw OnErrorPageException()
-                    }
-                    if(resultList.isEmpty()) continue
-                    for(r in resultList) {
-                        val shouldTake = resultPredicate == null || runCatching {
-                            resultPredicate(r)
-                        }.getOrDefault(false)
-                        if(shouldTake) {
-                            result = r
-                            break@outer
-                        }
+    ): String = tryBlock(3) {
+        val resultList = Collections.synchronizedList(LinkedList<String>())
+        val action = Callable {
+            var result: String? = null
+            loadPage(urlToLoad)
+            outer@
+            for(i in 1..120) {
+                Thread.sleep(500)
+                if(isOnErrorPage()) throw OnErrorPageException()
+                if(resultList.isEmpty()) continue
+                for(r in resultList) {
+                    val shouldTake = resultPredicate == null || runCatching {
+                        resultPredicate(r)
+                    }.getOrDefault(false)
+                    if(shouldTake) {
+                        result = r
+                        break@outer
                     }
                 }
-                result ?: throw TimeoutException("Cannot get the response of $urlPrefixToWait")
             }
-            try {
-                urlPrefixToResponseMap[urlPrefixToWait] = resultList
-                return waiterExecutor.submit(action).getOrCancel(60, TimeUnit.SECONDS)
-            } finally {
-                urlPrefixToResponseMap.remove(urlPrefixToWait)
+            result ?: throw TimeoutException("Cannot get the response of $urlPrefixToWait")
+        }
+        try {
+            urlPrefixToResponseMap[urlPrefixToWait] = resultList
+            return waiterExecutor.submit(action).getOrCancel(60, TimeUnit.SECONDS)
+        } catch(t: Throwable) {
+            when(t) {
+                is TimeoutException -> refreshEnvironment()
+                else -> when(ExceptionUtil.getRootCause(t)) {
+                    is OnErrorPageException -> refreshEnvironment()
+                }
             }
+            throw t
+        } finally {
+            urlPrefixToResponseMap.remove(urlPrefixToWait)
         }
     }
     
@@ -300,5 +303,13 @@ class BrowserService(
             }
         }
         return false
+    }
+
+    private fun refreshEnvironment() {
+        runCatching {
+            browser.devTools.send(Network.clearBrowserCookies())
+            proxyManager.newProxy()
+            loadBlankPage()
+        }
     }
 }

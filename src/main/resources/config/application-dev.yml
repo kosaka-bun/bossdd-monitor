@@ -18,7 +18,10 @@ honoka:
         http-port: 3101
 
 app:
-  proxy: localhost:10808
+  proxy:
+    address: brd.superproxy.io:33335
+    username: test
+    password: test
   browser:
     start-process-by-app: true
     user-data-dir:

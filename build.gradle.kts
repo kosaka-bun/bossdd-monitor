@@ -43,6 +43,10 @@ dependencies {
     runtimeOnly("com.mysql:mysql-connector-j")
     implementation("org.flywaydb:flyway-mysql")
     implementation("org.seleniumhq.selenium:selenium-java")
+    implementation("net.lightbody.bmp:browsermob-core:2.1.5") {
+        exclude("org.slf4j", "slf4j-api")
+        exclude("org.slf4j", "jcl-over-slf4j")
+    }
     kapt("org.springframework.boot:spring-boot-configuration-processor")
     libs.lombok.let {
         compileOnly(it)

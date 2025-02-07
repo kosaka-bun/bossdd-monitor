@@ -5,7 +5,7 @@ import cn.hutool.http.HttpUtil
 import cn.hutool.json.JSONObject
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl
 import de.honoka.bossddmonitor.common.ExtendedExceptionReporter
-import de.honoka.bossddmonitor.common.ProxyForwarder
+import de.honoka.bossddmonitor.common.ProxyManager
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.JobInfoMapper
@@ -21,7 +21,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class JobInfoService(
-    private val proxyForwarder: ProxyForwarder,
+    private val proxyManager: ProxyManager,
     private val exceptionReporter: ExtendedExceptionReporter
 ) : ServiceImpl<JobInfoMapper, JobInfo>() {
     
@@ -113,9 +113,8 @@ class JobInfoService(
                 """.singleLine()
                 val res = HttpUtil.createGet(url).run {
                     browserApiHeaders()
-                    proxyForwarder.forwarder?.run {
-                        closeAllConnections()
-                        setHttpProxy("localhost", port)
+                    if(proxyManager.available) {
+                        setHttpProxy("localhost", proxyManager.proxy.port)
                     }
                     execute().body().toJsonWrapper()
                 }

@@ -43,3 +43,8 @@ app:
         - /web/user/safe/verify-slider
       selectors:
         - .wrap-verify-slider
+
+logging:
+  level:
+    org.littleshoot.proxy.impl: off
+    io.netty.util.concurrent: off
