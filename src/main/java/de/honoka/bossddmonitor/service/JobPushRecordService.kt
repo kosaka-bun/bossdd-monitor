@@ -32,6 +32,7 @@ class JobPushRecordService(
     }
     
     private fun checkAndCreate(jobInfo: JobInfo, subscription: Subscription) {
+        if(baseMapper.userHasRecord(subscription.userId!!, jobInfo.id!!)) return
         val record = JobPushRecord().apply {
             jobInfoId = jobInfo.id
             subscribeUserId = subscription.userId

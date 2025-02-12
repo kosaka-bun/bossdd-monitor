@@ -84,24 +84,33 @@ class BossddPlatform(
                 if(ServiceLauncher.appShutdown) return
                 try {
                     val platformJobId = it.getStr("encryptJobId")
-                    jobInfoService.baseMapper.findIdByPlatformJobId(
+                    val existingJobInfo = jobInfoService.baseMapper.findByPlatformJobId(
                         PlatformEnum.BOSSDD, platformJobId
-                    )?.run {
+                    )
+                    if(jobInfoService.shouldUpdateIncrement(existingJobInfo)) {
                         val incrementJobInfo = parseIncrementJobInfo(it)
-                        incrementJobInfo.id = this
+                        incrementJobInfo.id = existingJobInfo!!.id
                         jobInfoService.updateById(incrementJobInfo)
                         return@forEachWrapper
                     }
                     val jobInfo = parseJobInfo(it).apply {
                         fromSearchWord = subscription.searchWord
                     }
-                    runCatching {
-                        jobInfoService.isEligible(jobInfo, subscription)
-                    }.getOrDefault(true).let { b ->
-                        if(!b) return@forEachWrapper
+                    existingJobInfo ?: run {
+                        runCatching {
+                            jobInfoService.isEligible(jobInfo, subscription)
+                        }.getOrDefault(true).let { b ->
+                            if(!b) return@forEachWrapper
+                        }
                     }
                     jobInfo.parseJobInfoDetails(it)
-                    jobInfoService.save(jobInfo)
+                    if(existingJobInfo == null) {
+                        jobInfoService.save(jobInfo)
+                    } else {
+                        jobPushRecordService.baseMapper.removeInvalidRecords(existingJobInfo.id!!)
+                        jobInfo.id = existingJobInfo.id
+                        jobInfoService.updateById(jobInfo)
+                    }
                     jobPushRecordService.checkAndCreate(jobInfo)
                 } catch(t: Throwable) {
                     if(t is RejectedExecutionException) return@forEachWrapper

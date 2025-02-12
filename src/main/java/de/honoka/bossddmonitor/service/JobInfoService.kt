@@ -1,5 +1,7 @@
 package de.honoka.bossddmonitor.service
 
+import cn.hutool.core.date.DateTime
+import cn.hutool.core.date.DateUnit
 import cn.hutool.core.util.ObjectUtil
 import cn.hutool.http.HttpUtil
 import cn.hutool.json.JSONObject
@@ -9,6 +11,7 @@ import de.honoka.bossddmonitor.common.ProxyManager
 import de.honoka.bossddmonitor.entity.JobInfo
 import de.honoka.bossddmonitor.entity.Subscription
 import de.honoka.bossddmonitor.mapper.JobInfoMapper
+import de.honoka.bossddmonitor.mapper.JobPushRecordMapper
 import de.honoka.bossddmonitor.platform.PlatformEnum
 import de.honoka.sdk.util.kotlin.basic.cast
 import de.honoka.sdk.util.kotlin.basic.exception
@@ -21,6 +24,7 @@ import org.springframework.stereotype.Service
 
 @Service
 class JobInfoService(
+    private val jobPushRecordMapper: JobPushRecordMapper,
     private val proxyManager: ProxyManager,
     private val exceptionReporter: ExtendedExceptionReporter
 ) : ServiceImpl<JobInfoMapper, JobInfo>() {
@@ -77,7 +81,7 @@ class JobInfoService(
         return fromSearchWord.contains(lowerSearchWord) || lowerSearchWord.contains(fromSearchWord)
     }
     
-    fun isHrLivenessValid(jobInfo: JobInfo): Boolean {
+    private fun isHrLivenessValid(jobInfo: JobInfo): Boolean {
         val validLivenessList = when(jobInfo.platform) {
             PlatformEnum.BOSSDD -> listOf("在线", "刚刚活跃", "今日活跃", "昨日活跃")
             else -> exception("Not support the platform: ${jobInfo.platform}")
@@ -128,5 +132,11 @@ class JobInfoService(
             }
             else -> exception("Not support the platform: ${jobInfo.platform}")
         }
+    }
+
+    fun shouldUpdateIncrement(jobInfo: JobInfo?): Boolean = run {
+        jobInfo ?: return false
+        DateTime.now().between(jobInfo.createTime, DateUnit.HOUR) < 24 ||
+            !jobPushRecordMapper.hasInvalidRecords(jobInfo.id!!)
     }
 }

@@ -10,13 +10,12 @@ import org.apache.ibatis.annotations.Param
 @Mapper
 interface JobInfoMapper : BaseMapper<JobInfo> {
     
-    fun findIdByPlatformJobId(platform: PlatformEnum, platformJobId: String): Long? {
+    fun findByPlatformJobId(platform: PlatformEnum, platformJobId: String): JobInfo? {
         queryChainWrapper().run {
-            select(JobInfo::id)
             eq(JobInfo::platform, platform)
             eq(JobInfo::platformJobId, platformJobId)
             last("limit 1")
-            return one()?.id
+            return one()
         }
     }
     

@@ -10,7 +10,7 @@ spring:
     enabled: false
     locations: classpath:flyway/sql
     baseline-on-migrate: true
-    baseline-version: 1
+    baseline-version: 0.0.0
     validate-on-migrate: false
     clean-disabled: true
     clean-on-validation-error: false

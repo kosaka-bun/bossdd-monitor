@@ -2,14 +2,14 @@
 <!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
 <mapper namespace="de.honoka.bossddmonitor.mapper.JobInfoMapper">
     <select id="getNoRecordsJobInfoList" resultType="de.honoka.bossddmonitor.entity.JobInfo">
-        with cte1 as (select id, job_info_id
+        with t1 as (select id, job_info_id
                       from job_push_record
                       where subscribe_user_id = #{userId}),
-             cte2 as (select t1.*, cte1.id record_id
-                      from job_info t1
-                               left join cte1 on t1.id = cte1.job_info_id)
+             t2 as (select ji.*, t1.id record_id
+                      from job_info ji
+                               left join t1 on ji.id = t1.job_info_id)
         select *
-        from cte2
+        from t2
         where record_id is null;
     </select>
 </mapper>
