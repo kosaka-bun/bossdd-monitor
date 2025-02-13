@@ -173,14 +173,19 @@ class BrowserService(
     }
     
     private fun loadBlankPage() {
-        ensureIsActive()
-        browser.get("about:blank")
-        Thread.sleep(500)
+        loadPage("about:blank", 500)
     }
     
     private fun loadPage(url: String, waitMillisAfterLoad: Long = 0) {
         ensureIsActive()
-        browser.get(url)
+        tryBlock(3) {
+            runCatching {
+                browser.get(url)
+            }.getOrElse {
+                initBrowser()
+                throw it
+            }
+        }
         Thread.sleep(waitMillisAfterLoad)
     }
 

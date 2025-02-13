@@ -136,7 +136,7 @@ class JobInfoService(
 
     fun shouldUpdateIncrement(jobInfo: JobInfo?): Boolean = run {
         jobInfo ?: return false
-        DateTime.now().between(jobInfo.createTime, DateUnit.HOUR) < 24 ||
+        isHrLivenessValid(jobInfo) || DateTime.now().between(jobInfo.createTime, DateUnit.HOUR) < 24 ||
             !jobPushRecordMapper.hasInvalidRecords(jobInfo.id!!)
     }
 }
