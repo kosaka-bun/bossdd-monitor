@@ -24,7 +24,7 @@ data class BrowserProperties(
         
         var path: String = "./selenium/user-data",
         
-        var clearOnStartup: Boolean = false
+        var clearBeforeInit: Boolean = true
     ) {
         
         val absolutePath: String

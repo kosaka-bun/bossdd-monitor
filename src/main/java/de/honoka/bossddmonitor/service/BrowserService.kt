@@ -69,9 +69,6 @@ class BrowserService(
     fun init() {
         hasBeenShutdown = false
         disableSeleniumLog()
-        if(browserProperties.userDataDir.clearOnStartup) {
-            clearUserDataDir()
-        }
     }
     
     fun stop() {
@@ -83,13 +80,19 @@ class BrowserService(
     
     private fun initBrowser(headless: Boolean = browserProperties.defaultHeadless) {
         tryBlock(3) {
-            doInitBrowser(headless)
+            if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
+            closeBrowser()
+            if(browserProperties.userDataDir.clearBeforeInit) {
+                clearUserDataDir()
+            }
+            tryBlock(2) {
+                closeBrowser()
+                doInitBrowser(headless)
+            }
         }
     }
     
     private fun doInitBrowser(headless: Boolean) {
-        if(hasBeenShutdown) exception("${javaClass.simpleName} has been shutdown.")
-        closeBrowser()
         val chromeArgs = ArrayList<String>().apply {
             val userDataDir = browserProperties.userDataDir.absolutePath
             this@BrowserService.log.info("Used user data directory of Selenium Chrome driver: $userDataDir")
@@ -135,17 +138,21 @@ class BrowserService(
     private fun closeBrowser() {
         if(ArrayUtil.isAllNull(browserProcess, browserOrNull)) return
         browserOrNull?.runCatching {
-            devTools.close()
-            quit()
-            browserOrNull = null
-        }
-        browserProcess?.runCatching {
-            if(isAlive) {
-                destroy()
-                waitFor(5, TimeUnit.SECONDS)
+            tryBlock(3) {
+                devTools.close()
+                quit()
             }
-            browserProcess = null
         }
+        browserOrNull = null
+        browserProcess?.runCatching {
+            tryBlock(3) {
+                if(isAlive) {
+                    destroy()
+                    waitFor(5, TimeUnit.SECONDS)
+                }
+            }
+        }
+        browserProcess = null
         log.info("Selenium Chrome driver has been closed.")
     }
     
@@ -218,10 +225,12 @@ class BrowserService(
             urlPrefixToResponseMap[urlPrefixToWait] = resultList
             return waiterExecutor.submit(action).getOrCancel(60, TimeUnit.SECONDS)
         } catch(t: Throwable) {
-            when(t) {
-                is TimeoutException -> refreshEnvironment()
-                else -> when(ExceptionUtil.getRootCause(t)) {
-                    is OnErrorPageException -> refreshEnvironment()
+            runCatching {
+                when(t) {
+                    is TimeoutException -> refreshEnvironment()
+                    else -> when(ExceptionUtil.getRootCause(t)) {
+                        is OnErrorPageException -> refreshEnvironment()
+                    }
                 }
             }
             throw t
@@ -311,10 +320,8 @@ class BrowserService(
     }
 
     private fun refreshEnvironment() {
-        runCatching {
-            browser.devTools.send(Network.clearBrowserCookies())
-            proxyManager.newProxy()
-            loadBlankPage()
-        }
+        browser.devTools.send(Network.clearBrowserCookies())
+        proxyManager.newProxy()
+        loadBlankPage()
     }
 }
