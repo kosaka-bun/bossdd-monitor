@@ -2,6 +2,7 @@ package de.honoka.bossddmonitor.service
 
 import cn.hutool.core.exceptions.ExceptionUtil
 import cn.hutool.core.util.ArrayUtil
+import de.honoka.bossddmonitor.common.ExtendedExceptionReporter
 import de.honoka.bossddmonitor.common.ProxyManager
 import de.honoka.bossddmonitor.common.ServiceLauncher
 import de.honoka.bossddmonitor.config.BrowserProperties
@@ -35,7 +36,8 @@ import java.util.logging.Logger
 @Service
 class BrowserService(
     private val browserProperties: BrowserProperties,
-    private val proxyManager: ProxyManager
+    private val proxyManager: ProxyManager,
+    private val exceptionReporter: ExtendedExceptionReporter
 ) {
     
     class OnErrorPageException : RuntimeException()
@@ -142,15 +144,19 @@ class BrowserService(
                 devTools.close()
                 quit()
             }
+        }?.getOrElse {
+            exceptionReporter.report(it)
         }
         browserOrNull = null
         browserProcess?.runCatching {
             tryBlock(3) {
-                if(isAlive) {
-                    destroy()
-                    waitFor(5, TimeUnit.SECONDS)
-                }
+                if(!isAlive) return@tryBlock
+                destroy()
+                waitFor(5, TimeUnit.SECONDS)
+                if(isAlive) exception("Browser process is still alive.")
             }
+        }?.getOrElse {
+            exceptionReporter.report(it)
         }
         browserProcess = null
         log.info("Selenium Chrome driver has been closed.")
@@ -189,7 +195,8 @@ class BrowserService(
             runCatching {
                 browser.get(url)
             }.getOrElse {
-                initBrowser()
+                val shouldReinit = it.message?.contains("ERR_TUNNEL_CONNECTION_FAILED") != true
+                if(shouldReinit) initBrowser()
                 throw it
             }
         }
